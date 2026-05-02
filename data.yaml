@@ -1,0 +1,6 @@
+path: /root/dataset
+train: train/images
+val: valid/images
+
+nc: 7
+names: ['Crossing_Violation', 'Crosswalk_Violation', 'Helmet_Violation', 'Normal', 'Passenger_Violation', 'Pedestrian_Violation', 'Trafficlight_Violation']

@@ -1,0 +1,6 @@
+{
+  "map50": 81.5,
+  "map50_95": 64.0,
+  "model": "runs/detect/runs/traffic/yolov8s_baseline/weights/best.pt",
+  "box_loss_weight": 8.0
+}

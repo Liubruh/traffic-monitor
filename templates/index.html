@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>交通智能监控系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white:   #ffffff;
+  --bg:      #f5f6f8;
+  --surface: #ffffff;
+  --border:  #e4e6ea;
+  --border2: #d0d3da;
+  --text:    #1a1d23;
+  --text2:   #6b7280;
+  --text3:   #9ca3af;
+  --blue:    #2563eb;
+  --blue-l:  #eff6ff;
+  --green:   #16a34a;
+  --green-l: #f0fdf4;
+  --red:     #dc2626;
+  --red-l:   #fef2f2;
+  --orange:  #ea580c;
+  --orange-l:#fff7ed;
+  --yellow:  #ca8a04;
+  --shadow:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow2: 0 4px 12px rgba(0,0,0,.1);
+  --radius:  8px;
+  --font:    'DM Sans', 'Noto Sans SC', sans-serif;
+  --mono:    'DM Mono', monospace;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  box-shadow: 0 1px 0 var(--border);
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-logo {
+  width: 28px; height: 28px;
+  background: var(--blue);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.header-logo svg { width: 16px; height: 16px; }
+.header-title { font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+.header-sub   { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px; font-weight: 500;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text2);
+}
+.pill .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text3);
+}
+.pill.running { background: var(--green-l); border-color: #bbf7d0; color: var(--green); }
+.pill.running .dot { background: var(--green); animation: blink 1.4s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.clock { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+
+.light-indicator {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--text3);
+  transition: background .3s, box-shadow .3s;
+}
+.light-indicator.red    { background: #ef4444; box-shadow: 0 0 8px #ef444488; }
+.light-indicator.green  { background: #22c55e; box-shadow: 0 0 8px #22c55e88; }
+.light-indicator.yellow { background: #eab308; box-shadow: 0 0 8px #eab30888; }
+
+/* ── Main Layout ───────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 260px;
+  flex: 1;
+  height: calc(100vh - 48px);
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+}
+.sidebar-right {
+  border-right: none;
+  border-left: 1px solid var(--border);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.sidebar-right-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 10px;
+}
+
+.sidebar-right .section {
+  padding: 10px 12px;
+}
+
+.sidebar-right .section-label {
+  margin-bottom: 8px;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.section-label {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+
+/* ── Form Controls ─────────────────────────────────────────────── */
+.field { margin-bottom: 10px; }
+.field-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.field-label span { color: var(--text3); font-size: 10px; }
+
+select, input[type=text], input[type=number] {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  font-family: var(--font); font-size: 12px; color: var(--text);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  -webkit-appearance: none;
+}
+select:focus, input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px #2563eb18;
+}
+
+.slider-row { display: flex; align-items: center; gap: 8px; }
+input[type=range] {
+  flex: 1; height: 4px;
+  -webkit-appearance: none;
+  background: var(--border);
+  border-radius: 2px; outline: none;
+  border: none; padding: 0;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--blue); cursor: pointer;
+  box-shadow: 0 1px 3px rgba(37,99,235,.4);
+}
+.slider-val { font-family: var(--mono); font-size: 11px; color: var(--blue); width: 34px; text-align: right; }
+
+/* Toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.toggle-label { font-size: 12px; }
+.toggle {
+  position: relative; width: 34px; height: 18px;
+  cursor: pointer;
+}
+.toggle input { display: none; }
+.toggle-track {
+  position: absolute; inset: 0; border-radius: 9px;
+  background: var(--border2); transition: background .2s;
+}
+.toggle input:checked ~ .toggle-track { background: var(--blue); }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: white; box-shadow: var(--shadow);
+  transition: left .2s;
+}
+.toggle input:checked ~ .toggle-thumb { left: 18px; }
+
+/* Checkboxes */
+.class-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.cb-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; border-radius: 5px; cursor: pointer;
+  font-size: 11.5px;
+  border: 1px solid transparent;
+  transition: background .1s;
+  user-select: none;
+}
+.cb-item:hover { background: var(--bg); }
+.cb-item input { display: none; }
+.cb-box {
+  width: 14px; height: 14px; border-radius: 3px;
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s;
+}
+.cb-item input:checked ~ .cb-box {
+  background: var(--blue); border-color: var(--blue);
+}
+.cb-box svg { display: none; }
+.cb-item input:checked ~ .cb-box svg { display: block; }
+
+/* Buttons */
+.btn {
+  display: block; width: 100%; height: 32px;
+  border-radius: 6px; border: 1px solid var(--border);
+  background: var(--white); color: var(--text);
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  cursor: pointer; letter-spacing: .2px;
+  transition: all .15s; margin-bottom: 6px;
+}
+.btn:hover { background: var(--bg); border-color: var(--border2); }
+.btn:active { transform: scale(.98); }
+.btn.primary {
+  background: var(--blue); border-color: var(--blue); color: white;
+}
+.btn.primary:hover { background: #1d4ed8; }
+.btn.danger  {
+  background: var(--white); border-color: #fca5a5; color: var(--red);
+}
+.btn.danger:hover  { background: var(--red-l); }
+.btn.success {
+  background: var(--white); border-color: #86efac; color: var(--green);
+}
+.btn.success:hover { background: var(--green-l); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* Upload */
+.upload-zone {
+  border: 1.5px dashed var(--border2); border-radius: 6px;
+  padding: 14px; text-align: center; cursor: pointer;
+  transition: all .15s; margin-bottom: 6px;
+}
+.upload-zone:hover { border-color: var(--blue); background: var(--blue-l); }
+.upload-zone input { display: none; }
+.upload-icon { font-size: 18px; margin-bottom: 4px; }
+.upload-hint { font-size: 10px; color: var(--text3); }
+.upload-name { font-size: 11px; color: var(--blue); margin-top: 4px; }
+
+/* ── Video Center ──────────────────────────────────────────────── */
+.video-panel {
+  display: flex; flex-direction: column;
+  background: #111;
+  position: relative;
+}
+.video-wrap {
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.video-stream {
+  width: 100%; height: 100%;
+  object-fit: contain; display: block;
+}
+
+/* Zone editor canvas overlay */
+#zoneCanvas {
+  position: absolute; inset: 0;
+  cursor: crosshair;
+  display: none;
+}
+.zone-editor-active #zoneCanvas { display: block; }
+
+.video-bar {
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  padding: 6px 14px;
+  display: flex; align-items: center; gap: 16px;
+  flex-shrink: 0;
+}
+.vb-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+.vb-val  { font-family: var(--mono); font-weight: 500; color: var(--text); }
+.vb-val.blue   { color: var(--blue); }
+.vb-val.green  { color: var(--green); }
+.vb-val.red    { color: var(--red); }
+.vb-val.orange { color: var(--orange); }
+
+/* ── Right Panel: Metrics ──────────────────────────────────────── */
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.metric-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px;
+}
+.metric-name  { font-size: 9px; font-weight: 600; text-transform: uppercase;
+                letter-spacing: 1px; color: var(--text3); margin-bottom: 4px; }
+.metric-value { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--text); }
+.metric-value.blue   { color: var(--blue); }
+.metric-value.green  { color: var(--green); }
+.metric-value.red    { color: var(--red); }
+.metric-value.orange { color: var(--orange); }
+
+/* Sparkline */
+.sparkline-wrap { background: var(--bg); border: 1px solid var(--border);
+                  border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+.sparkline-label { font-size: 9px; color: var(--text3); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+svg.sparkline { width: 100%; height: 36px; }
+
+.sidebar-right .metric-grid { gap: 4px; margin-bottom: 6px; }
+.sidebar-right .metric-card { padding: 6px 8px; }
+.sidebar-right .metric-name { margin-bottom: 2px; }
+.sidebar-right .metric-value { font-size: 16px; }
+.sidebar-right .sparkline-wrap { padding: 6px; margin-bottom: 0; }
+.sidebar-right svg.sparkline { height: 24px; }
+
+/* Vehicle records */
+#vehicleRecords {
+  height: 90px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+/* Violations summary */
+.vio-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 8px; border-radius: 5px;
+  margin-bottom: 4px; font-size: 11.5px;
+}
+.vio-row.red    { background: var(--red-l);    color: var(--red);    }
+.vio-row.orange { background: var(--orange-l); color: var(--orange); }
+.vio-row.blue   { background: var(--blue-l);   color: var(--blue);   }
+.vio-count { font-family: var(--mono); font-weight: 500; }
+
+/* Alert list */
+.alert-scroll {
+  height: 110px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+.alert-scroll::-webkit-scrollbar { width: 3px; }
+.alert-scroll::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.alert-card {
+  border-radius: 6px; padding: 8px 10px;
+  margin-bottom: 5px; border-left: 3px solid var(--border2);
+  background: var(--bg);
+  animation: slideIn .25s ease;
+}
+.alert-card.danger  { border-left-color: var(--red);    background: var(--red-l); }
+.alert-card.warning { border-left-color: var(--orange); background: var(--orange-l); }
+.alert-card.info    { border-left-color: var(--blue);   background: var(--blue-l); }
+@keyframes slideIn { from { opacity:0; transform:translateY(-4px); } }
+.alert-top { display: flex; justify-content: space-between; margin-bottom: 2px; }
+.alert-type { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.alert-time { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.alert-msg  { font-size: 11.5px; }
+
+
+/* Zone editor panel */
+.zone-tool-row {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.zone-btn {
+  flex: 1; min-width: 60px; height: 28px;
+  border-radius: 5px; border: 1px solid var(--border);
+  background: var(--white); font-size: 11px; color: var(--text2);
+  cursor: pointer; transition: all .15s;
+}
+.zone-btn:hover { background: var(--bg); }
+.zone-btn.active {
+  background: var(--blue-l); border-color: var(--blue); color: var(--blue);
+  font-weight: 500;
+}
+.zone-list {
+  font-size: 11px;
+  color: var(--text2);
+  height: 72px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.zone-entry {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; border-bottom: 1px solid var(--border);
+}
+.zone-entry:last-child { border: none; }
+.zone-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; }
+.zone-del:hover { color: var(--red); }
+
+/* Toast */
+.toasts {
+  position: fixed; bottom: 16px; right: 16px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.toast {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+  box-shadow: var(--shadow2); font-size: 12px;
+  display: flex; align-items: center; gap: 8px;
+  min-width: 200px; animation: toastIn .25s ease;
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error   { border-left: 3px solid var(--red);   }
+.toast.info    { border-left: 3px solid var(--blue);  }
+@keyframes toastIn { from { opacity:0; transform:translateY(8px); } }
+
+/* Scrollbar global */
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="header-logo">
+      <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.5">
+        <rect x="1" y="3" width="14" height="10" rx="1.5"/>
+        <circle cx="8" cy="8" r="2.5"/>
+        <path d="M1 6h3M12 6h3M1 10h3M12 10h3"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">交通智能监控系统</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)">
+      信号灯
+      <div class="light-indicator" id="lightIndicator" title="当前信号灯状态"></div>
+      <span id="lightText" style="font-family:var(--mono);font-size:10px">--</span>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="pill" id="statusPill"><div class="dot"></div><span id="statusText">待机</span></div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT: Controls -->
+  <div class="sidebar">
+
+    <div class="section">
+      <div class="section-label">视频源</div>
+      <div class="field">
+        <div class="field-label">输入类型</div>
+        <select id="sourceType" onchange="onSourceChange()">
+          <option value="camera">摄像头</option>
+          <option value="rtsp">RTSP 流</option>
+          <option value="file">视频文件</option>
+        </select>
+      </div>
+      <div class="field" id="camField">
+        <div class="field-label">摄像头索引</div>
+        <input type="number" id="camIdx" value="0" min="0" max="9">
+      </div>
+      <div class="field" id="rtspField" style="display:none">
+        <div class="field-label">RTSP 地址</div>
+        <input type="text" id="rtspUrl" placeholder="rtsp://...">
+      </div>
+      <div id="fileField" style="display:none">
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept="video/*" onchange="onFileUpload(event)">
+          <div class="upload-icon">📁</div>
+          <div class="upload-hint">点击上传视频文件</div>
+          <div class="upload-name" id="fileName"></div>
+        </div>
+        <div class="field-label">或直接输入路径</div>
+        <input type="text" id="filePath" placeholder="uploads/video.mp4">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">模型配置</div>
+      <div class="field">
+        <div class="field-label">YOLO 版本</div>
+        <select id="modelSize">
+          <option value="n">YOLOv8n — 最快 (Nano)</option>
+          <option value="s" selected>YOLOv8s — 均衡 (Small)</option>
+          <option value="m">YOLOv8m — 准确 (Medium)</option>
+          <option value="l">YOLOv8l — 高精度 (Large)</option>
+          <option value="x">YOLOv8x — 最佳 (XLarge)</option>
+          <option value="finetune">微调模型 (Fine-tuned)</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-label">置信度阈值</div>
+        <div class="slider-row">
+          <input type="range" id="confSlider" min="0.1" max="0.95" step="0.05" value="0.5"
+                 oninput="document.getElementById('confVal').textContent=parseFloat(this.value).toFixed(2)">
+          <div class="slider-val" id="confVal">0.50</div>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">启用 GPU 加速</span>
+        <label class="toggle" title="需要 CUDA / Apple MPS">
+          <input type="checkbox" id="useGPU" checked>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div id="deviceInfo" style="font-size:10px;color:var(--text3);margin-top:2px"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">检测类别</div>
+      <div class="class-grid">
+        <label class="cb-item"><input type="checkbox" value="person" checked>
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>行人</label>
+        <label class="cb-item"><input type="checkbox" value="car" checked>
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>轿车</label>
+        <label class="cb-item"><input type="checkbox" value="truck" checked>
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>卡车</label>
+        <label class="cb-item"><input type="checkbox" value="bus" checked>
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>公交车</label>
+        <label class="cb-item"><input type="checkbox" value="motorcycle">
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>摩托车</label>
+        <label class="cb-item"><input type="checkbox" value="bicycle">
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>自行车</label>
+        <label class="cb-item"><input type="checkbox" value="traffic light" checked>
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>信号灯</label>
+        <label class="cb-item"><input type="checkbox" value="stop sign">
+          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>停车标志</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">操作</div>
+      <button class="btn primary" id="btnStart" onclick="startDetection()">▶  开始检测</button>
+      <button class="btn danger"  id="btnStop"  onclick="stopDetection()" disabled>■  停止检测</button>
+      <button class="btn success" onclick="takeSnapshot()">◎  截取快照</button>
+      <button class="btn" onclick="clearAlerts()">清空报警记录</button>
+    </div>
+
+  </div>
+
+  <!-- CENTER: Video -->
+  <div class="video-panel" id="videoPanel">
+    <div class="video-wrap" id="videoWrap">
+      <img class="video-stream" id="videoFeed" src="/video_feed">
+      <canvas id="zoneCanvas"></canvas>
+    </div>
+    <div class="video-bar">
+      <div class="vb-item">FPS <span class="vb-val blue" id="vbFps">--</span></div>
+      <div class="vb-item">目标 <span class="vb-val green" id="vbObj">--</span></div>
+      <div class="vb-item">帧数 <span class="vb-val" id="vbFrames">--</span></div>
+      <div class="vb-item">违法 <span class="vb-val red" id="vbVio">--</span></div>
+      <div class="vb-item" style="margin-left:auto">运行 <span class="vb-val" id="vbElapsed">--</span>s</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Metrics & Alerts -->
+  <div class="sidebar sidebar-right">
+
+    <div class="sidebar-right-scroll" id="rightSidebarScroll">
+
+    <div class="section">
+      <div class="section-label">性能指标</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-name">FPS</div>
+          <div class="metric-value blue" id="mFps">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">均值检测</div>
+          <div class="metric-value green" id="mDet">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">总帧数</div>
+          <div class="metric-value" id="mFrames">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">mAP@50 <span id="mMapLabel" style="font-size:9px;color:var(--text3);font-weight:400"></span></div>
+          <div class="metric-value blue" id="mMap">--</div>
+        </div>
+      </div>
+      <div class="sparkline-wrap">
+        <div class="sparkline-label">FPS 历史</div>
+        <svg class="sparkline" id="fpsChart" viewBox="0 0 228 36" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2563eb" stop-opacity=".25"/>
+              <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon id="fpsFill" fill="url(#g1)"/>
+          <polyline id="fpsLine" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">车辆记录</div>
+      <div id="vehicleRecords"><div style="color:var(--text3);font-size:11px">等待检测...</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+        违规记录 <span id="alertBadge" style="background:var(--red);color:white;font-size:9px;padding:1px 6px;border-radius:10px;display:none">0</span>
+      </div>
+      <div class="alert-scroll" id="alertList">
+        <div style="color:var(--text3);font-size:11px">暂无违规</div>
+      </div>
+    </div>
+
+    <!-- Zone Editor -->
+    <div class="section">
+      <div class="section-label">违法检测区域配置</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">在视频上绘制停止线、斑马线、车道线、红绿灯区域</div>
+      <div class="zone-tool-row">
+        <button class="zone-btn" id="zb-stop"   onclick="setZoneTool('stop_line')">停止线</button>
+        <button class="zone-btn" id="zb-cross"  onclick="setZoneTool('crosswalk')">斑马线</button>
+        <button class="zone-btn" id="zb-lane"   onclick="setZoneTool('lane_line')">车道线</button>
+        <button class="zone-btn" id="zb-light"  onclick="setZoneTool('traffic_light_roi')" style="color:#d97706">红绿灯</button>
+        <button class="zone-btn" id="zb-none" style="color:var(--red)"  onclick="setZoneTool(null)">退出</button>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px" id="zoneHint">选择类型后在画面上点击绘制</div>
+      <div class="zone-list" id="zoneList"><div style="color:var(--text3)">尚未配置区域</div></div>
+      <button class="btn" style="margin-top:8px" onclick="pushZones()">应用区域配置</button>
+      <button class="btn danger" onclick="clearZones()" style="margin-top:0">清除所有区域</button>
+    </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+let isRunning   = false;
+let pollTimer   = null;
+let seenAlerts  = new Set();
+const HIDDEN_ALERT_KEYWORDS = ['行人未走斑马线', '乱穿马路'];
+let zoneTool    = null;   // 'stop_line' | 'crosswalk' | 'lane_line' | null
+let zones       = [];     // committed zones
+let drawingPts  = [];     // in-progress polygon points
+let canvas, ctx, videoEl, videoWrap;
+
+// ── Init ──────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  canvas   = document.getElementById('zoneCanvas');
+  ctx      = canvas.getContext('2d');
+  videoEl  = document.getElementById('videoFeed');
+  videoWrap = document.getElementById('videoWrap');
+  canvas.addEventListener('click',     onCanvasClick);
+  canvas.addEventListener('mousemove', onCanvasMove);
+  canvas.addEventListener('dblclick',  onCanvasDblClick);
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    redrawCanvas();
+  });
+  videoEl.addEventListener('load', () => {
+    resizeCanvas();
+    redrawCanvas();
+  });
+  setInterval(updateClock, 1000);
+  updateClock();
+  loadModelStats();
+});
+
+// COCO val 基准 mAP@50（来自 Ultralytics 官方文档）
+const COCO_MAP = { n: '52.4', s: '61.8', m: '67.2', l: '69.8', x: '71.0' };
+
+async function loadModelStats() {
+  updateMapDisplay();
+}
+
+// 每次切换模型版本时更新 mAP 显示
+document.getElementById('modelSize').addEventListener('change', updateMapDisplay);
+
+async function updateMapDisplay() {
+  const sel   = document.getElementById('modelSize').value;
+  const el    = document.getElementById('mMap');
+  const label = document.getElementById('mMapLabel');
+
+  if (sel === 'finetune') {
+    // 微调模型：从 model_stats.json 读取实际训练结果
+    try {
+      const r = await fetch('/api/model_stats');
+      const d = await r.json();
+      if (d.map50 !== null && d.map50 !== undefined) {
+        el.textContent  = d.map50 + '%';
+        label.textContent = '微调';
+        el.title = `微调模型验证集 mAP@50，box_loss_weight=${d.box_loss_weight ?? 8.0}`;
+      } else {
+        el.textContent  = '--';
+        label.textContent = '微调';
+        el.title = '运行 train.py 训练后自动更新';
+      }
+    } catch(e) {
+      el.textContent = '--';
+    }
+  } else {
+    // 标准模型：显示 COCO 官方基准值
+    const v = COCO_MAP[sel];
+    el.textContent  = v ? v + '%' : '--';
+    label.textContent = 'COCO基准';
+    el.title = `YOLOv8${sel} 在 COCO val 数据集上的官方基准 mAP@50`;
+  }
+}
+
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toTimeString().slice(0, 8);
+}
+
+function onSourceChange() {
+  const t = document.getElementById('sourceType').value;
+  document.getElementById('camField').style.display  = t==='camera' ? '' : 'none';
+  document.getElementById('rtspField').style.display = t==='rtsp'   ? '' : 'none';
+  document.getElementById('fileField').style.display = t==='file'   ? '' : 'none';
+}
+
+// ── File upload ───────────────────────────────────────────────────
+async function onFileUpload(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const fd = new FormData(); fd.append('file', file);
+  const r  = await fetch('/api/upload_video', {method:'POST', body:fd});
+  const d  = await r.json();
+  if (d.success) {
+    document.getElementById('filePath').value = d.path;
+    document.getElementById('fileName').textContent  = d.filename;
+    toast('文件上传成功', 'success');
+  } else toast(d.message, 'error');
+}
+
+// ── Get checked classes ───────────────────────────────────────────
+function getClasses() {
+  return [...document.querySelectorAll('.cb-item input:checked')].map(e=>e.value);
+}
+
+// ── Start / Stop ──────────────────────────────────────────────────
+async function startDetection() {
+  const st = document.getElementById('sourceType').value;
+  let sv = st==='camera' ? document.getElementById('camIdx').value
+         : st==='rtsp'   ? document.getElementById('rtspUrl').value
+         : document.getElementById('filePath').value;
+  if (!sv && st!=='camera') { toast('请填写视频源', 'error'); return; }
+
+  const payload = {
+    source_type:    st,
+    source_value:   sv || '0',
+    model_size:     document.getElementById('modelSize').value,
+    conf_threshold: document.getElementById('confSlider').value,
+    target_classes: getClasses(),
+    use_gpu:        document.getElementById('useGPU').checked,
+  };
+
+  toast('正在启动...', 'info');
+  const r = await fetch('/api/start', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  const d = await r.json();
+  if (d.success) {
+    isRunning = true;
+    setUI(true);
+    if (d.device) document.getElementById('deviceInfo').textContent = '设备: ' + d.device;
+    startPoll();
+    toast('检测已启动 ✓', 'success');
+    await pushZones();
+  } else toast(d.message, 'error');
+}
+
+async function stopDetection() {
+  await fetch('/api/stop', {method:'POST'});
+  isRunning = false;
+  setUI(false);
+  stopPoll();
+  toast('检测已停止', 'info');
+}
+
+function setUI(running) {
+  document.getElementById('btnStart').disabled = running;
+  document.getElementById('btnStop').disabled  = !running;
+  const pill = document.getElementById('statusPill');
+  const txt  = document.getElementById('statusText');
+  pill.className = 'pill' + (running ? ' running' : '');
+  txt.textContent = running ? '检测中' : '待机';
+}
+
+// ── Polling ───────────────────────────────────────────────────────
+function startPoll() { pollTimer = setInterval(fetchStatus, 900); }
+function stopPoll()  { clearInterval(pollTimer); pollTimer = null; }
+
+async function fetchStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    updateMetrics(d.metrics);
+    updateAlerts(d.alerts);
+    updateLightIndicator(d.light_color || 'unknown');
+    if (d.device) document.getElementById('deviceInfo').textContent = '设备: ' + d.device;
+  } catch(e) {}
+}
+
+function updateLightIndicator(color) {
+  const el = document.getElementById('lightIndicator');
+  el.className = 'light-indicator ' + (color !== 'unknown' ? color : '');
+  document.getElementById('lightText').textContent = 
+    {red:'红灯', green:'绿灯', yellow:'黄灯'}[color] || '--';
+}
+
+// ── Metrics ───────────────────────────────────────────────────────
+function updateMetrics(m) {
+  if (!m) return;
+  document.getElementById('vbFps').textContent    = m.fps;
+  document.getElementById('vbObj').textContent    = m.avg_detections;
+  document.getElementById('vbFrames').textContent = m.total_frames;
+  document.getElementById('vbVio').textContent    = m.total_violations || 0;
+  document.getElementById('vbElapsed').textContent= m.elapsed;
+  document.getElementById('mFps').textContent     = m.fps;
+  document.getElementById('mDet').textContent     = m.avg_detections;
+  document.getElementById('mFrames').textContent  = m.total_frames.toLocaleString();
+  drawSparkline(m.fps_history || []);
+  updateVehicleRecords(m.current_classes || {});
+}
+
+function drawSparkline(hist) {
+  if (!hist.length) return;
+  const W=228, H=36, p=3;
+  const mx = Math.max(...hist, 1);
+  const pts = hist.map((v,i)=>{
+    const x = p + i/(hist.length-1||1)*(W-2*p);
+    const y = H-p-(v/mx)*(H-2*p);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  document.getElementById('fpsLine').setAttribute('points', pts);
+  const last = pts.split(' ').slice(-1)[0].split(',');
+  document.getElementById('fpsFill').setAttribute('points',
+    pts + ` ${(W-p).toFixed(1)},${H} ${p},${H}`);
+}
+
+// 车辆记录：显示当前帧各类交通参与者数量
+function updateVehicleRecords(currentClasses) {
+  const el = document.getElementById('vehicleRecords');
+  const order  = ['car','truck','bus','motorcycle','bicycle','person'];
+  const labels = {car:'轿车', truck:'卡车', bus:'公交车', motorcycle:'摩托车', bicycle:'自行车', person:'行人'};
+  const colors = {car:'blue', truck:'orange', bus:'orange', motorcycle:'blue', bicycle:'blue', person:'green'};
+  const units  = {person:'人'};
+  const arr = order.filter(k => (currentClasses[k] || 0) > 0)
+                   .map(k => [k, currentClasses[k]]);
+  if (!arr.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:11px">等待检测...</div>';
+    return;
+  }
+  el.innerHTML = arr.map(([k, v]) => `
+    <div class="vio-row ${colors[k]||'blue'}">
+      <span>${labels[k]||k}</span>
+      <span class="vio-count">${v} ${units[k]||'辆'}</span>
+    </div>`).join('');
+}
+
+// ── Alerts ────────────────────────────────────────────────────────
+function updateAlerts(alerts) {
+  const src = alerts || [];
+  const visibleAlerts = src.filter(a => {
+    const t = String(a?.type || '');
+    const m = String(a?.message || '');
+    return !HIDDEN_ALERT_KEYWORDS.some(k => t.includes(k) || m.includes(k));
+  });
+
+  const badge = document.getElementById('alertBadge');
+  if (!visibleAlerts.length) {
+    document.getElementById('alertList').innerHTML = '<div style="color:var(--text3);font-size:11px">暂无违规</div>';
+    badge.style.display = 'none';
+    return;
+  }
+
+  visibleAlerts.forEach(a => seenAlerts.add(a.id));
+  badge.style.display = '';
+  badge.textContent   = seenAlerts.size;
+  document.getElementById('alertList').innerHTML = visibleAlerts.map(a=>`
+    <div class="alert-card ${a.level}">
+      <div class="alert-top">
+        <span class="alert-type">${a.type}</span>
+        <span class="alert-time">${a.time}</span>
+      </div>
+      <div class="alert-msg">${a.message}</div>
+    </div>`).join('');
+}
+
+// ── Snapshot ──────────────────────────────────────────────────────
+async function takeSnapshot() {
+  const r = await fetch('/api/snapshot', {method:'POST'});
+  const d = await r.json();
+  if (d.success) {
+    toast('截图已保存：' + d.filename, 'success');
+  } else toast(d.message, 'error');
+}
+
+// ── Alert config ──────────────────────────────────────────────────
+async function clearAlerts() {
+  await fetch('/api/alerts/clear',{method:'POST'});
+  document.getElementById('alertList').innerHTML='<div style="color:var(--text3);font-size:11px">暂无报警</div>';
+  document.getElementById('alertBadge').style.display='none';
+  seenAlerts.clear();
+  toast('已清空报警记录', 'info');
+}
+
+// ── Zone Editor ───────────────────────────────────────────────────
+function setZoneTool(tool) {
+  zoneTool   = tool;
+  drawingPts = [];
+  ['stop','cross','lane','light'].forEach(k=>document.getElementById('zb-'+k).classList.remove('active'));
+  const map = {stop_line:'stop', crosswalk:'cross', lane_line:'lane', traffic_light_roi:'light'};
+  if (tool && map[tool]) document.getElementById('zb-'+map[tool]).classList.add('active');
+  document.getElementById('videoPanel').classList.toggle('zone-editor-active', !!tool);
+  resizeCanvas();
+  redrawCanvas();
+
+  const hints = {
+    stop_line:         '点击第一个端点，再点击第二个端点，自动完成（支持斜线）',
+    crosswalk:         '单击添加多边形顶点，双击闭合斑马线区域',
+    lane_line:         '单击添加车道线节点，双击结束车道线',
+    traffic_light_roi: '单击圈出红绿灯所在区域（多边形），双击完成 — 系统将直接对此区域分析灯色',
+  };
+  document.getElementById('zoneHint').textContent = tool ? hints[tool] : '选择类型后在画面上点击绘制';
+}
+
+function resizeCanvas() {
+  canvas.width  = videoWrap.offsetWidth;
+  canvas.height = videoWrap.offsetHeight;
+}
+
+function getVideoRenderRect() {
+  const cw = canvas.width || 1;
+  const ch = canvas.height || 1;
+  const nw = videoEl.naturalWidth || cw;
+  const nh = videoEl.naturalHeight || ch;
+  const videoRatio = nh > 0 ? (nw / nh) : (cw / ch);
+  const canvasRatio = cw / ch;
+
+  let w = cw;
+  let h = ch;
+  let x = 0;
+  let y = 0;
+
+  if (videoRatio > 0) {
+    if (canvasRatio > videoRatio) {
+      h = ch;
+      w = h * videoRatio;
+      x = (cw - w) / 2;
+    } else {
+      w = cw;
+      h = w / videoRatio;
+      y = (ch - h) / 2;
+    }
+  }
+
+  return { x, y, w, h, nw, nh };
+}
+
+function pointInVideoRect(x, y, r) {
+  return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+}
+
+function onCanvasClick(e) {
+  if (!zoneTool) return;
+  const r   = canvas.getBoundingClientRect();
+  const x   = Math.round(e.clientX - r.left);
+  const y   = Math.round(e.clientY - r.top);
+  const vr  = getVideoRenderRect();
+
+  // 忽略落在黑边(letterbox)区域的点击，避免坐标偏移
+  if (!pointInVideoRect(x, y, vr)) return;
+
+  if (zoneTool === 'stop_line') {
+    drawingPts.push([x, y]);
+    if (drawingPts.length >= 2) {
+      // 第二个点点完自动提交
+      zones.push({ type: 'stop_line', pts: [...drawingPts] });
+      drawingPts = [];
+      renderZoneList();
+    }
+    redrawCanvas();
+    return;
+  }
+  drawingPts.push([x, y]);
+  redrawCanvas();
+}
+
+function onCanvasMove(e) {
+  if (!zoneTool || drawingPts.length === 0) return;
+  const r  = canvas.getBoundingClientRect();
+  const vr = getVideoRenderRect();
+  const mx = e.clientX - r.left;
+  const my = e.clientY - r.top;
+  const cx = Math.max(vr.x, Math.min(vr.x + vr.w, mx));
+  const cy = Math.max(vr.y, Math.min(vr.y + vr.h, my));
+  redrawCanvas(cx, cy);
+}
+
+function onCanvasDblClick(e) {
+  if (!zoneTool) return;
+  if (zoneTool === 'stop_line') return;
+  if (drawingPts.length < 2) { drawingPts = []; return; }
+  zones.push({ type: zoneTool, pts: [...drawingPts] });
+  drawingPts = [];
+  renderZoneList();
+  redrawCanvas();
+}
+
+function redrawCanvas(mx, my) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const colorMap = {stop_line:'#ef4444', crosswalk:'#16a34a', lane_line:'#2563eb', traffic_light_roi:'#d97706'};
+
+  // 已保存的区域
+  zones.forEach(z => {
+    ctx.strokeStyle = colorMap[z.type] || '#888';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([]);
+    if (z.type === 'stop_line') {
+      ctx.beginPath();
+      if (z.pts && z.pts.length >= 2) {
+        ctx.moveTo(z.pts[0][0], z.pts[0][1]);
+        ctx.lineTo(z.pts[1][0], z.pts[1][1]);
+      } else {
+        ctx.moveTo(z.x1, z.y); ctx.lineTo(z.x2, z.y);  // 兼容旧格式
+      }
+      ctx.stroke();
+      ctx.fillStyle = colorMap[z.type];
+      ctx.font = '11px DM Sans, sans-serif';
+      const lp = z.pts ? z.pts[0] : [6, z.y];
+      ctx.fillText('停止线', lp[0]+6, lp[1]-6);
+    } else if (z.pts && z.pts.length) {
+      ctx.fillStyle = colorMap[z.type] + '28';
+      ctx.beginPath();
+      ctx.moveTo(z.pts[0][0], z.pts[0][1]);
+      z.pts.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  });
+
+  // 正在绘制
+  if (drawingPts.length) {
+    ctx.strokeStyle = colorMap[zoneTool] || '#888';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([5, 3]);
+    if (zoneTool === 'stop_line') {
+      // 停止线：只画从第一个点到鼠标的线段预览
+      ctx.beginPath();
+      ctx.moveTo(drawingPts[0][0], drawingPts[0][1]);
+      if (mx !== undefined) ctx.lineTo(mx, my);
+      ctx.stroke();
+      // 起点圆点
+      ctx.fillStyle = colorMap[zoneTool] || '#888';
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(drawingPts[0][0], drawingPts[0][1], 4, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillStyle = (colorMap[zoneTool] || '#888') + '18';
+      ctx.beginPath();
+      ctx.moveTo(drawingPts[0][0], drawingPts[0][1]);
+      drawingPts.slice(1).forEach(p=>ctx.lineTo(p[0], p[1]));
+      if (mx !== undefined) ctx.lineTo(mx, my);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      drawingPts.forEach(p=>{
+        ctx.fillStyle = colorMap[zoneTool];
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI*2); ctx.fill();
+      });
+    }
+  }
+}
+
+function renderZoneList() {
+  const el  = document.getElementById('zoneList');
+  const map = {stop_line:'停止线', crosswalk:'斑马线', lane_line:'车道线', traffic_light_roi:'红绿灯区域'};
+  if (!zones.length) { el.innerHTML='<div style="color:var(--text3)">尚未配置区域</div>'; return; }
+  el.innerHTML = zones.map((z,i)=>`
+    <div class="zone-entry">
+      <span>${map[z.type]||z.type} #${i+1}</span>
+      <button class="zone-del" onclick="removeZone(${i})">×</button>
+    </div>`).join('');
+}
+
+function removeZone(i) {
+  zones.splice(i, 1);
+  renderZoneList();
+  redrawCanvas();
+}
+
+function clearZones() {
+  zones = []; drawingPts = [];
+  renderZoneList(); redrawCanvas();
+  fetch('/api/set_zones', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({zones: []})});
+  toast('已清除所有区域', 'info');
+}
+
+async function pushZones() {
+  // 将画布坐标映射到实际视频显示区域，再转成视频帧坐标
+  const vr = getVideoRenderRect();
+  const frameW = Math.max(1, Math.round(videoEl.naturalWidth  || vr.w || 1));
+  const frameH = Math.max(1, Math.round(videoEl.naturalHeight || vr.h || 1));
+
+  const toFramePoint = (p) => {
+    const relX = (p[0] - vr.x) / (vr.w || 1);
+    const relY = (p[1] - vr.y) / (vr.h || 1);
+    const fx = Math.round(Math.max(0, Math.min(frameW - 1, relX * frameW)));
+    const fy = Math.round(Math.max(0, Math.min(frameH - 1, relY * frameH)));
+    return [fx, fy];
+  };
+
+  const scaled = zones.map(z => {
+    if (z.pts) return { ...z, pts: z.pts.map(toFramePoint) };
+    // 兼容旧格式 stop_line（无 pts）
+    if (z.type === 'stop_line') {
+      const p1 = toFramePoint([z.x1, z.y]);
+      const p2 = toFramePoint([z.x2, z.y]);
+      return { ...z, pts: [p1, p2] };
+    }
+    return z;
+  });
+  await fetch('/api/set_zones', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({zones: scaled})});
+  toast(`已应用 ${zones.length} 个检测区域`, 'success');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  const ico = {success:'✓', error:'✕', info:'ℹ'};
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${ico[type]||'●'}</span><span>${msg}</span>`;
+  c.prepend(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+</script>
+</body>
+</html>
