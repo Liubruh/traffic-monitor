@@ -4,613 +4,394 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>交通智能监控系统</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 /* ── Reset & Variables ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-:root {
-  --white:   #ffffff;
-  --bg:      #f5f6f8;
-  --surface: #ffffff;
-  --border:  #e4e6ea;
-  --border2: #d0d3da;
-  --text:    #1a1d23;
-  --text2:   #6b7280;
-  --text3:   #9ca3af;
-  --blue:    #2563eb;
-  --blue-l:  #eff6ff;
-  --green:   #16a34a;
-  --green-l: #f0fdf4;
-  --red:     #dc2626;
-  --red-l:   #fef2f2;
-  --orange:  #ea580c;
-  --orange-l:#fff7ed;
-  --yellow:  #ca8a04;
-  --shadow:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-  --shadow2: 0 4px 12px rgba(0,0,0,.1);
-  --radius:  8px;
-  --font:    'DM Sans', 'Noto Sans SC', sans-serif;
-  --mono:    'DM Mono', monospace;
+:root{
+  --bg:#f1f5f9;--surface:#fff;--border:#e2e8f0;--hl:#cbd5e1;
+  --text:#0f172a;--text2:#64748b;--text3:#94a3b8;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-bd:#bfdbfe;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-bd:#bbf7d0;
+  --red:#dc2626;--red-bg:#fef2f2;--red-bd:#fecaca;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-bd:#fde68a;
+  --radius:8px;--radius-sm:6px;
+  --font:Inter,system-ui,"PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:"SF Mono","Cascadia Code","Consolas",monospace;
 }
 
-body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  font-size: 13px;
+body{
+  font:13px/1.5 var(--font);background:var(--bg);color:var(--text);
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;
 }
 
 /* ── Header ────────────────────────────────────────────────────── */
-.header {
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  padding: 0 20px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  box-shadow: 0 1px 0 var(--border);
+.header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  height:48px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;flex-shrink:0;
 }
-.header-left { display: flex; align-items: center; gap: 10px; }
-.header-logo {
-  width: 28px; height: 28px;
-  background: var(--blue);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-}
-.header-logo svg { width: 16px; height: 16px; }
-.header-title { font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
-.header-sub   { font-size: 11px; color: var(--text3); margin-top: 1px; }
-.header-right { display: flex; align-items: center; gap: 16px; }
+.header-l{display:flex;align-items:center;gap:10px}
+.header-r{display:flex;align-items:center;gap:14px}
 
-.pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px; font-weight: 500;
-  background: var(--bg); border: 1px solid var(--border);
-  color: var(--text2);
-}
-.pill .dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--text3);
-}
-.pill.running { background: var(--green-l); border-color: #bbf7d0; color: var(--green); }
-.pill.running .dot { background: var(--green); animation: blink 1.4s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.logo{width:28px;height:28px;background:var(--blue);border-radius:7px;
+  display:flex;align-items:center;justify-content:center}
+.logo svg{width:15px;height:15px}
+.title{font-size:15px;font-weight:600}
 
-.clock { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:20px;font-size:11px;font-weight:500;
+  background:var(--bg);border:1px solid var(--border);color:var(--text2)}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.pill.on{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
+.pill.on .dot{background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-.light-indicator {
-  width: 20px; height: 20px; border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--text3);
-  transition: background .3s, box-shadow .3s;
-}
-.light-indicator.red    { background: #ef4444; box-shadow: 0 0 8px #ef444488; }
-.light-indicator.green  { background: #22c55e; box-shadow: 0 0 8px #22c55e88; }
-.light-indicator.yellow { background: #eab308; box-shadow: 0 0 8px #eab30888; }
+.clock{font:12px var(--mono);color:var(--text2)}
 
-/* ── Main Layout ───────────────────────────────────────────────── */
-.layout {
-  display: grid;
-  grid-template-columns: 260px 1fr 260px;
-  flex: 1;
-  height: calc(100vh - 48px);
-  min-height: 0;
-  overflow: hidden;
-  gap: 0;
-}
+.light{width:20px;height:20px;border-radius:50%;
+  border:2px solid var(--border);background:var(--text3);
+  transition:background .3s,box-shadow .3s}
+.light.red{background:#ef4444;box-shadow:0 0 8px #ef444488}
+.light.green{background:#22c55e;box-shadow:0 0 8px #22c55e88}
+.light.yellow{background:#eab308;box-shadow:0 0 8px #eab30888}
 
-/* ── Sidebar ───────────────────────────────────────────────────── */
-.sidebar {
-  background: var(--white);
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  min-height: 0;
-  overflow-y: auto; overflow-x: hidden;
-}
-.sidebar-right {
-  border-right: none;
-  border-left: 1px solid var(--border);
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-.sidebar-right-scroll {
-  height: 100%;
-  min-height: 0;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 10px;
-}
+/* ── Layout ─────────────────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:260px 1fr 260px;flex:1;min-height:0;overflow:hidden}
 
-.sidebar-right .section {
-  padding: 10px 12px;
-}
+/* ── Left sidebar ──────────────────────────────────────────────── */
+.side-l{background:var(--surface);border-right:1px solid var(--border);
+  overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+.side-l::-webkit-scrollbar{width:3px}
+.side-l::-webkit-scrollbar-thumb{background:var(--hl);border-radius:2px}
 
-.sidebar-right .section-label {
-  margin-bottom: 8px;
-}
-.sidebar::-webkit-scrollbar { width: 3px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+details{border-bottom:1px solid var(--border)}
+details summary{
+  padding:10px 16px;font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:1.2px;color:var(--text3);cursor:pointer;
+  display:flex;align-items:center;gap:6px;list-style:none;user-select:none}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:'▾';margin-left:auto;font-size:10px;transition:transform .2s}
+details[open] summary::after{transform:rotate(180deg)}
+details .body{padding:0 16px 14px}
 
-.section {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  flex: 0 0 auto;
-}
-.section-label {
-  font-size: 10px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 1px;
-  color: var(--text3);
-  margin-bottom: 10px;
-}
+/* ── Form controls ─────────────────────────────────────────────── */
+.fld{margin-bottom:10px}
+.fld-lbl{font-size:11px;color:var(--text2);margin-bottom:4px;display:block}
 
-/* ── Form Controls ─────────────────────────────────────────────── */
-.field { margin-bottom: 10px; }
-.field-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
-.field-label span { color: var(--text3); font-size: 10px; }
+select,input[type=text],input[type=number]{
+  width:100%;height:34px;padding:0 10px;border:1px solid var(--border);
+  border-radius:var(--radius-sm);background:var(--surface);
+  font:12px var(--font);color:var(--text);outline:none;
+  transition:border-color .15s,box-shadow .15s}
+select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb14}
 
-select, input[type=text], input[type=number] {
-  width: 100%;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--white);
-  font-family: var(--font); font-size: 12px; color: var(--text);
-  outline: none;
-  transition: border-color .15s, box-shadow .15s;
-  -webkit-appearance: none;
-}
-select:focus, input:focus {
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px #2563eb18;
-}
+.range-r{display:flex;align-items:center;gap:8px}
+input[type=range]{flex:1;height:4px;-webkit-appearance:none;background:var(--border);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+  width:14px;height:14px;border-radius:50%;background:var(--blue);cursor:pointer}
+.range-v{font:11px var(--mono);color:var(--blue);width:34px;text-align:right}
 
-.slider-row { display: flex; align-items: center; gap: 8px; }
-input[type=range] {
-  flex: 1; height: 4px;
-  -webkit-appearance: none;
-  background: var(--border);
-  border-radius: 2px; outline: none;
-  border: none; padding: 0;
-}
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--blue); cursor: pointer;
-  box-shadow: 0 1px 3px rgba(37,99,235,.4);
-}
-.slider-val { font-family: var(--mono); font-size: 11px; color: var(--blue); width: 34px; text-align: right; }
-
-/* Toggle */
-.toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.toggle-label { font-size: 12px; }
-.toggle {
-  position: relative; width: 34px; height: 18px;
-  cursor: pointer;
-}
-.toggle input { display: none; }
-.toggle-track {
-  position: absolute; inset: 0; border-radius: 9px;
-  background: var(--border2); transition: background .2s;
-}
-.toggle input:checked ~ .toggle-track { background: var(--blue); }
-.toggle-thumb {
-  position: absolute; top: 2px; left: 2px;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: white; box-shadow: var(--shadow);
-  transition: left .2s;
-}
-.toggle input:checked ~ .toggle-thumb { left: 18px; }
+.tog-r{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.tog-lbl{font-size:12px}
+.toggle{position:relative;width:34px;height:18px;cursor:pointer}
+.toggle input{display:none}
+.toggle .tk{position:absolute;inset:0;border-radius:9px;background:var(--hl);transition:background .2s}
+.toggle input:checked~.tk{background:var(--blue)}
+.toggle .th{position:absolute;top:2px;left:2px;width:14px;height:14px;
+  border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:left .2s}
+.toggle input:checked~.th{left:18px}
 
 /* Checkboxes */
-.class-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.cb-item {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 6px; border-radius: 5px; cursor: pointer;
-  font-size: 11.5px;
-  border: 1px solid transparent;
-  transition: background .1s;
-  user-select: none;
-}
-.cb-item:hover { background: var(--bg); }
-.cb-item input { display: none; }
-.cb-box {
-  width: 14px; height: 14px; border-radius: 3px;
-  border: 1.5px solid var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; transition: all .15s;
-}
-.cb-item input:checked ~ .cb-box {
-  background: var(--blue); border-color: var(--blue);
-}
-.cb-box svg { display: none; }
-.cb-item input:checked ~ .cb-box svg { display: block; }
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.cb{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:5px;
+  cursor:pointer;font-size:11.5px;border:1px solid transparent;user-select:none}
+.cb:hover{background:var(--bg)}
+.cb input{display:none}
+.cb .bx{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--hl);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.cb input:checked~.bx{background:var(--blue);border-color:var(--blue)}
+.cb .bx svg{display:none}
+.cb input:checked~.bx svg{display:block}
+
+/* Space between form groups */
+details + details { border-top: none; }
 
 /* Buttons */
-.btn {
-  display: block; width: 100%; height: 32px;
-  border-radius: 6px; border: 1px solid var(--border);
-  background: var(--white); color: var(--text);
-  font-family: var(--font); font-size: 12px; font-weight: 500;
-  cursor: pointer; letter-spacing: .2px;
-  transition: all .15s; margin-bottom: 6px;
-}
-.btn:hover { background: var(--bg); border-color: var(--border2); }
-.btn:active { transform: scale(.98); }
-.btn.primary {
-  background: var(--blue); border-color: var(--blue); color: white;
-}
-.btn.primary:hover { background: #1d4ed8; }
-.btn.danger  {
-  background: var(--white); border-color: #fca5a5; color: var(--red);
-}
-.btn.danger:hover  { background: var(--red-l); }
-.btn.success {
-  background: var(--white); border-color: #86efac; color: var(--green);
-}
-.btn.success:hover { background: var(--green-l); }
-.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn{display:block;width:100%;height:34px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);
+  font:12px/1 var(--font);font-weight:500;cursor:pointer;
+  transition:all .15s;margin-bottom:6px;letter-spacing:.2px}
+.btn:hover{background:var(--bg);border-color:var(--hl)}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:white}
+.btn.pri:hover{background:#1d4ed8}
+.btn.danger{border-color:var(--red-bd);color:var(--red)}
+.btn.danger:hover{background:var(--red-bg)}
+.btn.succ{border-color:var(--green-bd);color:var(--green)}
+.btn.succ:hover{background:var(--green-bg)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
-/* Upload */
-.upload-zone {
-  border: 1.5px dashed var(--border2); border-radius: 6px;
-  padding: 14px; text-align: center; cursor: pointer;
-  transition: all .15s; margin-bottom: 6px;
-}
-.upload-zone:hover { border-color: var(--blue); background: var(--blue-l); }
-.upload-zone input { display: none; }
-.upload-icon { font-size: 18px; margin-bottom: 4px; }
-.upload-hint { font-size: 10px; color: var(--text3); }
-.upload-name { font-size: 11px; color: var(--blue); margin-top: 4px; }
+/* Upload zone */
+.upload{border:1.5px dashed var(--hl);border-radius:var(--radius-sm);
+  padding:12px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:6px}
+.upload:hover{border-color:var(--blue);background:var(--blue-bg)}
+.upload input{display:none}
+.upload .ico{font-size:16px;margin-bottom:2px}
+.upload .hint{font-size:10px;color:var(--text3)}
+.upload .name{font-size:11px;color:var(--blue);margin-top:4px}
 
-/* ── Video Center ──────────────────────────────────────────────── */
-.video-panel {
-  display: flex; flex-direction: column;
-  background: #111;
-  position: relative;
-}
-.video-wrap {
-  flex: 1; min-height: 0;
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-}
-.video-stream {
-  width: 100%; height: 100%;
-  object-fit: contain; display: block;
-}
+/* ── Video center ──────────────────────────────────────────────── */
+.video-panel{background:#0f172a;display:flex;flex-direction:column;position:relative}
+.video-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
+.video-stream{width:100%;height:100%;object-fit:contain;display:block}
+#zoneCanvas{position:absolute;inset:0;cursor:crosshair;display:none}
+.zone-editor-active #zoneCanvas{display:block}
 
-/* Zone editor canvas overlay */
-#zoneCanvas {
-  position: absolute; inset: 0;
-  cursor: crosshair;
-  display: none;
-}
-.zone-editor-active #zoneCanvas { display: block; }
+.video-bar{background:var(--surface);border-top:1px solid var(--border);
+  padding:5px 14px;display:flex;align-items:center;gap:18px;flex-shrink:0}
+.vb{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}
+.vb .v{font:500 12px var(--mono);color:var(--text)}
+.vb .v.c1{color:var(--blue)}.vb .v.c2{color:var(--green)}.vb .v.c3{color:var(--red)}.vb .v.c4{color:var(--amber)}
 
-.video-bar {
-  background: var(--white);
-  border-top: 1px solid var(--border);
-  padding: 6px 14px;
-  display: flex; align-items: center; gap: 16px;
-  flex-shrink: 0;
-}
-.vb-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
-.vb-val  { font-family: var(--mono); font-weight: 500; color: var(--text); }
-.vb-val.blue   { color: var(--blue); }
-.vb-val.green  { color: var(--green); }
-.vb-val.red    { color: var(--red); }
-.vb-val.orange { color: var(--orange); }
+/* ── Right sidebar ─────────────────────────────────────────────── */
+.side-r{background:var(--surface);border-left:1px solid var(--border);
+  overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding-bottom:10px}
+.side-r::-webkit-scrollbar{width:3px}
+.side-r::-webkit-scrollbar-thumb{background:var(--hl);border-radius:2px}
 
-/* ── Right Panel: Metrics ──────────────────────────────────────── */
-.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
-.metric-card {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; padding: 8px 10px;
-}
-.metric-name  { font-size: 9px; font-weight: 600; text-transform: uppercase;
-                letter-spacing: 1px; color: var(--text3); margin-bottom: 4px; }
-.metric-value { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--text); }
-.metric-value.blue   { color: var(--blue); }
-.metric-value.green  { color: var(--green); }
-.metric-value.red    { color: var(--red); }
-.metric-value.orange { color: var(--orange); }
+.sec{padding:12px 14px;border-bottom:1px solid var(--border)}
+.sec-lbl{font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:1px;color:var(--text3);margin-bottom:10px}
 
-/* Sparkline */
-.sparkline-wrap { background: var(--bg); border: 1px solid var(--border);
-                  border-radius: 6px; padding: 8px; margin-bottom: 8px; }
-.sparkline-label { font-size: 9px; color: var(--text3); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-svg.sparkline { width: 100%; height: 36px; }
+/* Metrics */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.mcard{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px}
+.mcard .mn{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:2px}
+.mcard .mv{font:500 17px var(--mono)}
+.mcard .mv.c1{color:var(--blue)}.mcard .mv.c2{color:var(--green)}.mcard .mv.c3{color:var(--red)}
 
-.sidebar-right .metric-grid { gap: 4px; margin-bottom: 6px; }
-.sidebar-right .metric-card { padding: 6px 8px; }
-.sidebar-right .metric-name { margin-bottom: 2px; }
-.sidebar-right .metric-value { font-size: 16px; }
-.sidebar-right .sparkline-wrap { padding: 6px; margin-bottom: 0; }
-.sidebar-right svg.sparkline { height: 24px; }
+.spark{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px}
+.spark .sl{font-size:9px;color:var(--text3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.8px}
+.spark svg{width:100%;height:32px}
 
 /* Vehicle records */
-#vehicleRecords {
-  height: 90px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 4px;
-  scrollbar-gutter: stable;
-}
+#vehicleRecords{max-height:80px;overflow-y:auto;scrollbar-gutter:stable}
+.vrow{display:flex;justify-content:space-between;align-items:center;
+  padding:4px 8px;border-radius:5px;margin-bottom:3px;font-size:11px}
+.vrow.c1{background:var(--blue-bg);color:var(--blue)}
+.vrow.c2{background:var(--green-bg);color:var(--green)}
+.vrow.c4{background:var(--amber-bg);color:var(--amber)}
+.vrow .vc{font:500 11px var(--mono)}
 
-/* Violations summary */
-.vio-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 5px 8px; border-radius: 5px;
-  margin-bottom: 4px; font-size: 11.5px;
-}
-.vio-row.red    { background: var(--red-l);    color: var(--red);    }
-.vio-row.orange { background: var(--orange-l); color: var(--orange); }
-.vio-row.blue   { background: var(--blue-l);   color: var(--blue);   }
-.vio-count { font-family: var(--mono); font-weight: 500; }
+/* Alerts */
+.alert-scroll{max-height:130px;overflow-y:auto;scrollbar-gutter:stable}
+.alert-scroll::-webkit-scrollbar{width:3px}
+.alert-scroll::-webkit-scrollbar-thumb{background:var(--hl)}
+.acard{border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:5px;
+  border-left:3px solid var(--hl);background:var(--bg);animation:in .25s ease}
+.acard.danger{border-left-color:var(--red);background:var(--red-bg)}
+.acard.warning{border-left-color:var(--amber);background:var(--amber-bg)}
+.acard.info{border-left-color:var(--blue);background:var(--blue-bg)}
+@keyframes in{from{opacity:0;transform:translateY(-4px)}}
+.acard .at{display:flex;justify-content:space-between;margin-bottom:2px}
+.acard .att{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.acard .atm{font:10px var(--mono);color:var(--text3)}
+.acard .am{font-size:11.5px}
 
-/* Alert list */
-.alert-scroll {
-  height: 110px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-gutter: stable;
-}
-.alert-scroll::-webkit-scrollbar { width: 3px; }
-.alert-scroll::-webkit-scrollbar-thumb { background: var(--border2); }
+/* Zone editor */
+.ztools{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.zbtn{flex:1;min-width:56px;height:30px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface);font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s}
+.zbtn:hover{background:var(--bg)}
+.zbtn.active{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);font-weight:500}
+.zbtn.exit{color:var(--red);border-color:transparent}
+.zbtn.exit:hover{background:var(--red-bg)}
+.zlist{font-size:11px;color:var(--text2);max-height:72px;overflow-y:auto;scrollbar-gutter:stable}
+.zent{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)}
+.zent:last-child{border:none}
+.zent .zdel{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px}
+.zent .zdel:hover{color:var(--red)}
+.zinfo{font-size:11px;color:var(--text2);margin-bottom:8px}
 
-.alert-card {
-  border-radius: 6px; padding: 8px 10px;
-  margin-bottom: 5px; border-left: 3px solid var(--border2);
-  background: var(--bg);
-  animation: slideIn .25s ease;
-}
-.alert-card.danger  { border-left-color: var(--red);    background: var(--red-l); }
-.alert-card.warning { border-left-color: var(--orange); background: var(--orange-l); }
-.alert-card.info    { border-left-color: var(--blue);   background: var(--blue-l); }
-@keyframes slideIn { from { opacity:0; transform:translateY(-4px); } }
-.alert-top { display: flex; justify-content: space-between; margin-bottom: 2px; }
-.alert-type { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-.alert-time { font-family: var(--mono); font-size: 10px; color: var(--text3); }
-.alert-msg  { font-size: 11.5px; }
+/* ── Toasts ────────────────────────────────────────────────────── */
+.toasts{position:fixed;bottom:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.1);font-size:12px;
+  display:flex;align-items:center;gap:8px;min-width:200px;animation:tin .25s ease}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+.toast.info{border-left:3px solid var(--blue)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
 
-
-/* Zone editor panel */
-.zone-tool-row {
-  display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px;
-}
-.zone-btn {
-  flex: 1; min-width: 60px; height: 28px;
-  border-radius: 5px; border: 1px solid var(--border);
-  background: var(--white); font-size: 11px; color: var(--text2);
-  cursor: pointer; transition: all .15s;
-}
-.zone-btn:hover { background: var(--bg); }
-.zone-btn.active {
-  background: var(--blue-l); border-color: var(--blue); color: var(--blue);
-  font-weight: 500;
-}
-.zone-list {
-  font-size: 11px;
-  color: var(--text2);
-  height: 72px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 4px;
-  scrollbar-gutter: stable;
-}
-.zone-entry {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 0; border-bottom: 1px solid var(--border);
-}
-.zone-entry:last-child { border: none; }
-.zone-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; }
-.zone-del:hover { color: var(--red); }
-
-/* Toast */
-.toasts {
-  position: fixed; bottom: 16px; right: 16px; z-index: 9999;
-  display: flex; flex-direction: column; gap: 6px;
-}
-.toast {
-  background: var(--white); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 14px;
-  box-shadow: var(--shadow2); font-size: 12px;
-  display: flex; align-items: center; gap: 8px;
-  min-width: 200px; animation: toastIn .25s ease;
-}
-.toast.success { border-left: 3px solid var(--green); }
-.toast.error   { border-left: 3px solid var(--red);   }
-.toast.info    { border-left: 3px solid var(--blue);  }
-@keyframes toastIn { from { opacity:0; transform:translateY(8px); } }
-
-/* Scrollbar global */
-::-webkit-scrollbar       { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+/* ── Global scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--hl);border-radius:2px}
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
 <header class="header">
-  <div class="header-left">
-    <div class="header-logo">
+  <div class="header-l">
+    <div class="logo">
       <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.5">
         <rect x="1" y="3" width="14" height="10" rx="1.5"/>
         <circle cx="8" cy="8" r="2.5"/>
         <path d="M1 6h3M12 6h3M1 10h3M12 10h3"/>
       </svg>
     </div>
-    <div>
-      <div class="header-title">交通智能监控系统</div>
-    </div>
+    <div class="title">交通智能监控系统</div>
   </div>
-  <div class="header-right">
+  <div class="header-r">
     <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)">
       信号灯
-      <div class="light-indicator" id="lightIndicator" title="当前信号灯状态"></div>
-      <span id="lightText" style="font-family:var(--mono);font-size:10px">--</span>
+      <div class="light" id="lightIndicator" title="当前信号灯状态"></div>
+      <span id="lightText" style="font:10px var(--mono)">--</span>
     </div>
     <div class="clock" id="clock">--:--:--</div>
     <div class="pill" id="statusPill"><div class="dot"></div><span id="statusText">待机</span></div>
   </div>
 </header>
 
-<!-- LAYOUT -->
+<!-- Layout -->
 <div class="layout">
 
-  <!-- LEFT: Controls -->
-  <div class="sidebar">
+  <!-- LEFT sidebar ────────────────────────────────────────────── -->
+  <div class="side-l">
 
-    <div class="section">
-      <div class="section-label">视频源</div>
-      <div class="field">
-        <div class="field-label">输入类型</div>
-        <select id="sourceType" onchange="onSourceChange()">
-          <option value="camera">摄像头</option>
-          <option value="rtsp">RTSP 流</option>
-          <option value="file">视频文件</option>
-        </select>
-      </div>
-      <div class="field" id="camField">
-        <div class="field-label">摄像头索引</div>
-        <input type="number" id="camIdx" value="0" min="0" max="9">
-      </div>
-      <div class="field" id="rtspField" style="display:none">
-        <div class="field-label">RTSP 地址</div>
-        <input type="text" id="rtspUrl" placeholder="rtsp://...">
-      </div>
-      <div id="fileField" style="display:none">
-        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-          <input type="file" id="fileInput" accept="video/*" onchange="onFileUpload(event)">
-          <div class="upload-icon">📁</div>
-          <div class="upload-hint">点击上传视频文件</div>
-          <div class="upload-name" id="fileName"></div>
+    <details open>
+      <summary>视频源</summary>
+      <div class="body">
+        <div class="fld">
+          <label class="fld-lbl">输入类型</label>
+          <select id="sourceType" onchange="onSourceChange()">
+            <option value="camera">摄像头</option>
+            <option value="rtsp">RTSP 流</option>
+            <option value="file">视频文件</option>
+          </select>
         </div>
-        <div class="field-label">或直接输入路径</div>
-        <input type="text" id="filePath" placeholder="uploads/video.mp4">
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-label">模型配置</div>
-      <div class="field">
-        <div class="field-label">YOLO 版本</div>
-        <select id="modelSize">
-          <option value="n">YOLOv8n — 最快 (Nano)</option>
-          <option value="s" selected>YOLOv8s — 均衡 (Small)</option>
-          <option value="m">YOLOv8m — 准确 (Medium)</option>
-          <option value="l">YOLOv8l — 高精度 (Large)</option>
-          <option value="x">YOLOv8x — 最佳 (XLarge)</option>
-          <option value="finetune">微调模型 (Fine-tuned)</option>
-        </select>
-      </div>
-      <div class="field">
-        <div class="field-label">置信度阈值</div>
-        <div class="slider-row">
-          <input type="range" id="confSlider" min="0.1" max="0.95" step="0.05" value="0.5"
-                 oninput="document.getElementById('confVal').textContent=parseFloat(this.value).toFixed(2)">
-          <div class="slider-val" id="confVal">0.50</div>
+        <div class="fld" id="camField">
+          <label class="fld-lbl">摄像头索引</label>
+          <input type="number" id="camIdx" value="0" min="0" max="9">
+        </div>
+        <div class="fld" id="rtspField" style="display:none">
+          <label class="fld-lbl">RTSP 地址</label>
+          <input type="text" id="rtspUrl" placeholder="rtsp://...">
+        </div>
+        <div id="fileField" style="display:none">
+          <div class="upload" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="video/*" onchange="onFileUpload(event)">
+            <div class="ico">&#128193;</div>
+            <div class="hint">点击上传视频文件</div>
+            <div class="name" id="fileName"></div>
+          </div>
+          <label class="fld-lbl">或直接输入路径</label>
+          <input type="text" id="filePath" placeholder="uploads/video.mp4">
         </div>
       </div>
-      <div class="toggle-row">
-        <span class="toggle-label">启用 GPU 加速</span>
-        <label class="toggle" title="需要 CUDA / Apple MPS">
-          <input type="checkbox" id="useGPU" checked>
-          <div class="toggle-track"></div>
-          <div class="toggle-thumb"></div>
-        </label>
-      </div>
-      <div id="deviceInfo" style="font-size:10px;color:var(--text3);margin-top:2px"></div>
-    </div>
+    </details>
 
-    <div class="section">
-      <div class="section-label">检测类别</div>
-      <div class="class-grid">
-        <label class="cb-item"><input type="checkbox" value="person" checked>
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>行人</label>
-        <label class="cb-item"><input type="checkbox" value="car" checked>
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>轿车</label>
-        <label class="cb-item"><input type="checkbox" value="truck" checked>
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>卡车</label>
-        <label class="cb-item"><input type="checkbox" value="bus" checked>
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>公交车</label>
-        <label class="cb-item"><input type="checkbox" value="motorcycle">
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>摩托车</label>
-        <label class="cb-item"><input type="checkbox" value="bicycle">
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>自行车</label>
-        <label class="cb-item"><input type="checkbox" value="traffic light" checked>
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>信号灯</label>
-        <label class="cb-item"><input type="checkbox" value="stop sign">
-          <div class="cb-box"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>停车标志</label>
+    <details open>
+      <summary>模型配置</summary>
+      <div class="body">
+        <div class="fld">
+          <label class="fld-lbl">YOLO 版本</label>
+          <select id="modelSize">
+            <option value="n">YOLOv8n — 最快 (Nano)</option>
+            <option value="s" selected>YOLOv8s — 均衡 (Small)</option>
+            <option value="m">YOLOv8m — 准确 (Medium)</option>
+            <option value="l">YOLOv8l — 高精度 (Large)</option>
+            <option value="x">YOLOv8x — 最佳 (XLarge)</option>
+            <option value="finetune">微调模型 (Fine-tuned)</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label class="fld-lbl">置信度阈值</label>
+          <div class="range-r">
+            <input type="range" id="confSlider" min="0.1" max="0.95" step="0.05" value="0.5"
+                   oninput="document.getElementById('confVal').textContent=parseFloat(this.value).toFixed(2)">
+            <div class="range-v" id="confVal">0.50</div>
+          </div>
+        </div>
+        <div class="tog-r">
+          <span class="tog-lbl">启用 GPU 加速</span>
+          <label class="toggle" title="需要 CUDA / Apple MPS">
+            <input type="checkbox" id="useGPU" checked>
+            <div class="tk"></div>
+            <div class="th"></div>
+          </label>
+        </div>
+        <div id="deviceInfo" style="font-size:10px;color:var(--text3);margin-top:2px"></div>
       </div>
-    </div>
+    </details>
 
-    <div class="section">
-      <div class="section-label">操作</div>
-      <button class="btn primary" id="btnStart" onclick="startDetection()">▶  开始检测</button>
-      <button class="btn danger"  id="btnStop"  onclick="stopDetection()" disabled>■  停止检测</button>
-      <button class="btn success" onclick="takeSnapshot()">◎  截取快照</button>
-      <button class="btn" onclick="clearAlerts()">清空报警记录</button>
-    </div>
+    <details open>
+      <summary>检测类别</summary>
+      <div class="body">
+        <div class="cgrid">
+          <label class="cb"><input type="checkbox" value="person" checked>
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>行人</label>
+          <label class="cb"><input type="checkbox" value="car" checked>
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>轿车</label>
+          <label class="cb"><input type="checkbox" value="truck" checked>
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>卡车</label>
+          <label class="cb"><input type="checkbox" value="bus" checked>
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>公交车</label>
+          <label class="cb"><input type="checkbox" value="motorcycle">
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>摩托车</label>
+          <label class="cb"><input type="checkbox" value="bicycle">
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>自行车</label>
+          <label class="cb"><input type="checkbox" value="traffic light" checked>
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>信号灯</label>
+          <label class="cb"><input type="checkbox" value="stop sign">
+            <div class="bx"><svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5l2.5 2.5 4.5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>停车标志</label>
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>操作</summary>
+      <div class="body">
+        <button class="btn pri" id="btnStart" onclick="startDetection()">&#9654;  开始检测</button>
+        <button class="btn danger" id="btnStop" onclick="stopDetection()" disabled>&#9632;  停止检测</button>
+        <button class="btn succ" onclick="takeSnapshot()">&#9678;  截取快照</button>
+        <button class="btn" onclick="clearAlerts()">清空报警记录</button>
+      </div>
+    </details>
 
   </div>
 
-  <!-- CENTER: Video -->
+  <!-- CENTER: Video ────────────────────────────────────────────── -->
   <div class="video-panel" id="videoPanel">
     <div class="video-wrap" id="videoWrap">
       <img class="video-stream" id="videoFeed" src="/video_feed">
       <canvas id="zoneCanvas"></canvas>
     </div>
     <div class="video-bar">
-      <div class="vb-item">FPS <span class="vb-val blue" id="vbFps">--</span></div>
-      <div class="vb-item">目标 <span class="vb-val green" id="vbObj">--</span></div>
-      <div class="vb-item">帧数 <span class="vb-val" id="vbFrames">--</span></div>
-      <div class="vb-item">违法 <span class="vb-val red" id="vbVio">--</span></div>
-      <div class="vb-item" style="margin-left:auto">运行 <span class="vb-val" id="vbElapsed">--</span>s</div>
+      <div class="vb">FPS <span class="v c1" id="vbFps">--</span></div>
+      <div class="vb">目标 <span class="v c2" id="vbObj">--</span></div>
+      <div class="vb">帧数 <span class="v" id="vbFrames">--</span></div>
+      <div class="vb">违法 <span class="v c3" id="vbVio">--</span></div>
+      <div class="vb" style="margin-left:auto">运行 <span class="v" id="vbElapsed">--</span>s</div>
     </div>
   </div>
 
-  <!-- RIGHT: Metrics & Alerts -->
-  <div class="sidebar sidebar-right">
+  <!-- RIGHT sidebar ────────────────────────────────────────────── -->
+  <div class="side-r">
 
-    <div class="sidebar-right-scroll" id="rightSidebarScroll">
-
-    <div class="section">
-      <div class="section-label">性能指标</div>
-      <div class="metric-grid">
-        <div class="metric-card">
-          <div class="metric-name">FPS</div>
-          <div class="metric-value blue" id="mFps">--</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">均值检测</div>
-          <div class="metric-value green" id="mDet">--</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">总帧数</div>
-          <div class="metric-value" id="mFrames">0</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">mAP@50 <span id="mMapLabel" style="font-size:9px;color:var(--text3);font-weight:400"></span></div>
-          <div class="metric-value blue" id="mMap">--</div>
-        </div>
+    <div class="sec">
+      <div class="sec-lbl">性能指标</div>
+      <div class="mgrid">
+        <div class="mcard"><div class="mn">FPS</div><div class="mv c1" id="mFps">--</div></div>
+        <div class="mcard"><div class="mn">均值检测</div><div class="mv c2" id="mDet">--</div></div>
+        <div class="mcard"><div class="mn">总帧数</div><div class="mv" id="mFrames">0</div></div>
+        <div class="mcard"><div class="mn">mAP@50 <span id="mMapLabel" style="font-size:9px;color:var(--text3);font-weight:400"></span></div><div class="mv c1" id="mMap">--</div></div>
       </div>
-      <div class="sparkline-wrap">
-        <div class="sparkline-label">FPS 历史</div>
-        <svg class="sparkline" id="fpsChart" viewBox="0 0 228 36" preserveAspectRatio="none">
+      <div class="spark">
+        <div class="sl">FPS 历史</div>
+        <svg id="fpsChart" viewBox="0 0 228 36" preserveAspectRatio="none">
           <defs>
             <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#2563eb" stop-opacity=".25"/>
@@ -623,13 +404,13 @@ svg.sparkline { width: 100%; height: 36px; }
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-label">车辆记录</div>
+    <div class="sec">
+      <div class="sec-lbl">车辆记录</div>
       <div id="vehicleRecords"><div style="color:var(--text3);font-size:11px">等待检测...</div></div>
     </div>
 
-    <div class="section">
-      <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+    <div class="sec">
+      <div class="sec-lbl" style="display:flex;justify-content:space-between;align-items:center">
         违规记录 <span id="alertBadge" style="background:var(--red);color:white;font-size:9px;padding:1px 6px;border-radius:10px;display:none">0</span>
       </div>
       <div class="alert-scroll" id="alertList">
@@ -637,23 +418,19 @@ svg.sparkline { width: 100%; height: 36px; }
       </div>
     </div>
 
-    <!-- Zone Editor -->
-    <div class="section">
-      <div class="section-label">违法检测区域配置</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">在视频上绘制停止线、斑马线、红绿灯区域</div>
-      <div class="zone-tool-row">
-        <button class="zone-btn" id="zb-stop"   onclick="setZoneTool('stop_line')">停止线</button>
-        <button class="zone-btn" id="zb-cross"  onclick="setZoneTool('crosswalk')">斑马线</button>
-
-        <button class="zone-btn" id="zb-light"  onclick="setZoneTool('traffic_light_roi')" style="color:#d97706">红绿灯</button>
-        <button class="zone-btn" id="zb-none" style="color:var(--red)"  onclick="setZoneTool(null)">退出</button>
+    <div class="sec">
+      <div class="sec-lbl">违法检测区域配置</div>
+      <div class="zinfo">在视频上绘制停止线、斑马线、红绿灯区域</div>
+      <div class="ztools">
+        <button class="zbtn" id="zb-stop"   onclick="setZoneTool('stop_line')">停止线</button>
+        <button class="zbtn" id="zb-cross"  onclick="setZoneTool('crosswalk')">斑马线</button>
+        <button class="zbtn" id="zb-light"  onclick="setZoneTool('traffic_light_roi')" style="color:var(--amber)">红绿灯</button>
+        <button class="zbtn exit" id="zb-none" onclick="setZoneTool(null)">退出</button>
       </div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:8px" id="zoneHint">选择类型后在画面上点击绘制</div>
-      <div class="zone-list" id="zoneList"><div style="color:var(--text3)">尚未配置区域</div></div>
+      <div class="zlist" id="zoneList"><div style="color:var(--text3)">尚未配置区域</div></div>
       <button class="btn" style="margin-top:8px" onclick="pushZones()">应用区域配置</button>
       <button class="btn danger" onclick="clearZones()" style="margin-top:0">清除所有区域</button>
-    </div>
-
     </div>
 
   </div>
@@ -668,9 +445,9 @@ let isRunning   = false;
 let pollTimer   = null;
 let seenAlerts  = new Set();
 const HIDDEN_ALERT_KEYWORDS = ['行人未走斑马线', '乱穿马路'];
-let zoneTool    = null;   // 'stop_line' | 'crosswalk' | 'traffic_light_roi' | null
-let zones       = [];     // committed zones
-let drawingPts  = [];     // in-progress polygon points
+let zoneTool    = null;
+let zones       = [];
+let drawingPts  = [];
 let canvas, ctx, videoEl, videoWrap;
 
 // ── Init ──────────────────────────────────────────────────────────
@@ -695,14 +472,12 @@ window.addEventListener('load', () => {
   loadModelStats();
 });
 
-// COCO val 基准 mAP@50（来自 Ultralytics 官方文档）
 const COCO_MAP = { n: '52.4', s: '61.8', m: '67.2', l: '69.8', x: '71.0' };
 
 async function loadModelStats() {
   updateMapDisplay();
 }
 
-// 每次切换模型版本时更新 mAP 显示
 document.getElementById('modelSize').addEventListener('change', updateMapDisplay);
 
 async function updateMapDisplay() {
@@ -711,7 +486,6 @@ async function updateMapDisplay() {
   const label = document.getElementById('mMapLabel');
 
   if (sel === 'finetune') {
-    // 微调模型：从 model_stats.json 读取实际训练结果
     try {
       const r = await fetch('/api/model_stats');
       const d = await r.json();
@@ -728,7 +502,6 @@ async function updateMapDisplay() {
       el.textContent = '--';
     }
   } else {
-    // 标准模型：显示 COCO 官方基准值
     const v = COCO_MAP[sel];
     el.textContent  = v ? v + '%' : '--';
     label.textContent = 'COCO基准';
@@ -764,7 +537,7 @@ async function onFileUpload(ev) {
 
 // ── Get checked classes ───────────────────────────────────────────
 function getClasses() {
-  return [...document.querySelectorAll('.cb-item input:checked')].map(e=>e.value);
+  return [...document.querySelectorAll('.cb input:checked')].map(e=>e.value);
 }
 
 // ── Start / Stop ──────────────────────────────────────────────────
@@ -793,7 +566,7 @@ async function startDetection() {
     setUI(true);
     if (d.device) document.getElementById('deviceInfo').textContent = '设备: ' + d.device;
     startPoll();
-    toast('检测已启动 ✓', 'success');
+    toast('检测已启动', 'success');
     await pushZones();
   } else toast(d.message, 'error');
 }
@@ -811,7 +584,7 @@ function setUI(running) {
   document.getElementById('btnStop').disabled  = !running;
   const pill = document.getElementById('statusPill');
   const txt  = document.getElementById('statusText');
-  pill.className = 'pill' + (running ? ' running' : '');
+  pill.className = 'pill' + (running ? ' on' : '');
   txt.textContent = running ? '检测中' : '待机';
 }
 
@@ -832,8 +605,8 @@ async function fetchStatus() {
 
 function updateLightIndicator(color) {
   const el = document.getElementById('lightIndicator');
-  el.className = 'light-indicator ' + (color !== 'unknown' ? color : '');
-  document.getElementById('lightText').textContent = 
+  el.className = 'light ' + (color !== 'unknown' ? color : '');
+  document.getElementById('lightText').textContent =
     {red:'红灯', green:'绿灯', yellow:'黄灯'}[color] || '--';
 }
 
@@ -862,17 +635,15 @@ function drawSparkline(hist) {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
   document.getElementById('fpsLine').setAttribute('points', pts);
-  const last = pts.split(' ').slice(-1)[0].split(',');
   document.getElementById('fpsFill').setAttribute('points',
     pts + ` ${(W-p).toFixed(1)},${H} ${p},${H}`);
 }
 
-// 车辆记录：显示当前帧各类交通参与者数量
 function updateVehicleRecords(currentClasses) {
   const el = document.getElementById('vehicleRecords');
   const order  = ['car','truck','bus','motorcycle','bicycle','person'];
   const labels = {car:'轿车', truck:'卡车', bus:'公交车', motorcycle:'摩托车', bicycle:'自行车', person:'行人'};
-  const colors = {car:'blue', truck:'orange', bus:'orange', motorcycle:'blue', bicycle:'blue', person:'green'};
+  const colors = {car:'c1', truck:'c4', bus:'c4', motorcycle:'c1', bicycle:'c1', person:'c2'};
   const units  = {person:'人'};
   const arr = order.filter(k => (currentClasses[k] || 0) > 0)
                    .map(k => [k, currentClasses[k]]);
@@ -881,9 +652,9 @@ function updateVehicleRecords(currentClasses) {
     return;
   }
   el.innerHTML = arr.map(([k, v]) => `
-    <div class="vio-row ${colors[k]||'blue'}">
+    <div class="vrow ${colors[k]||'c1'}">
       <span>${labels[k]||k}</span>
-      <span class="vio-count">${v} ${units[k]||'辆'}</span>
+      <span class="vc">${v} ${units[k]||'辆'}</span>
     </div>`).join('');
 }
 
@@ -907,12 +678,12 @@ function updateAlerts(alerts) {
   badge.style.display = '';
   badge.textContent   = seenAlerts.size;
   document.getElementById('alertList').innerHTML = visibleAlerts.map(a=>`
-    <div class="alert-card ${a.level}">
-      <div class="alert-top">
-        <span class="alert-type">${a.type}</span>
-        <span class="alert-time">${a.time}</span>
+    <div class="acard ${a.level}">
+      <div class="at">
+        <span class="att">${a.type}</span>
+        <span class="atm">${a.time}</span>
       </div>
-      <div class="alert-msg">${a.message}</div>
+      <div class="am">${a.message}</div>
     </div>`).join('');
 }
 
@@ -925,7 +696,6 @@ async function takeSnapshot() {
   } else toast(d.message, 'error');
 }
 
-// ── Alert config ──────────────────────────────────────────────────
 async function clearAlerts() {
   await fetch('/api/alerts/clear',{method:'POST'});
   document.getElementById('alertList').innerHTML='<div style="color:var(--text3);font-size:11px">暂无报警</div>';
@@ -948,8 +718,7 @@ function setZoneTool(tool) {
   const hints = {
     stop_line:         '点击第一个端点，再点击第二个端点，自动完成（支持斜线）',
     crosswalk:         '单击添加多边形顶点，双击闭合斑马线区域',
-
-    traffic_light_roi: '单击圈出红绿灯所在区域（多边形），双击完成 — 系统将直接对此区域分析灯色',
+    traffic_light_roi: '单击圈出红绿灯所在区域（多边形），双击完成',
   };
   document.getElementById('zoneHint').textContent = tool ? hints[tool] : '选择类型后在画面上点击绘制';
 }
@@ -998,13 +767,11 @@ function onCanvasClick(e) {
   const y   = Math.round(e.clientY - r.top);
   const vr  = getVideoRenderRect();
 
-  // 忽略落在黑边(letterbox)区域的点击，避免坐标偏移
   if (!pointInVideoRect(x, y, vr)) return;
 
   if (zoneTool === 'stop_line') {
     drawingPts.push([x, y]);
     if (drawingPts.length >= 2) {
-      // 第二个点点完自动提交
       zones.push({ type: 'stop_line', pts: [...drawingPts] });
       drawingPts = [];
       renderZoneList();
@@ -1042,7 +809,6 @@ function redrawCanvas(mx, my) {
 
   const colorMap = {stop_line:'#ef4444', crosswalk:'#16a34a', traffic_light_roi:'#d97706'};
 
-  // 已保存的区域
   zones.forEach(z => {
     ctx.strokeStyle = colorMap[z.type] || '#888';
     ctx.lineWidth   = 2;
@@ -1053,11 +819,11 @@ function redrawCanvas(mx, my) {
         ctx.moveTo(z.pts[0][0], z.pts[0][1]);
         ctx.lineTo(z.pts[1][0], z.pts[1][1]);
       } else {
-        ctx.moveTo(z.x1, z.y); ctx.lineTo(z.x2, z.y);  // 兼容旧格式
+        ctx.moveTo(z.x1, z.y); ctx.lineTo(z.x2, z.y);
       }
       ctx.stroke();
       ctx.fillStyle = colorMap[z.type];
-      ctx.font = '11px DM Sans, sans-serif';
+      ctx.font = '11px Inter, sans-serif';
       const lp = z.pts ? z.pts[0] : [6, z.y];
       ctx.fillText('停止线', lp[0]+6, lp[1]-6);
     } else if (z.pts && z.pts.length) {
@@ -1069,18 +835,15 @@ function redrawCanvas(mx, my) {
     }
   });
 
-  // 正在绘制
   if (drawingPts.length) {
     ctx.strokeStyle = colorMap[zoneTool] || '#888';
     ctx.lineWidth   = 2;
     ctx.setLineDash([5, 3]);
     if (zoneTool === 'stop_line') {
-      // 停止线：只画从第一个点到鼠标的线段预览
       ctx.beginPath();
       ctx.moveTo(drawingPts[0][0], drawingPts[0][1]);
       if (mx !== undefined) ctx.lineTo(mx, my);
       ctx.stroke();
-      // 起点圆点
       ctx.fillStyle = colorMap[zoneTool] || '#888';
       ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(drawingPts[0][0], drawingPts[0][1], 4, 0, Math.PI*2); ctx.fill();
@@ -1105,9 +868,9 @@ function renderZoneList() {
   const map = {stop_line:'停止线', crosswalk:'斑马线', traffic_light_roi:'红绿灯区域'};
   if (!zones.length) { el.innerHTML='<div style="color:var(--text3)">尚未配置区域</div>'; return; }
   el.innerHTML = zones.map((z,i)=>`
-    <div class="zone-entry">
+    <div class="zent">
       <span>${map[z.type]||z.type} #${i+1}</span>
-      <button class="zone-del" onclick="removeZone(${i})">×</button>
+      <button class="zdel" onclick="removeZone(${i})">\u00d7</button>
     </div>`).join('');
 }
 
@@ -1126,7 +889,6 @@ function clearZones() {
 }
 
 async function pushZones() {
-  // 将画布坐标映射到实际视频显示区域，再转成视频帧坐标
   const vr = getVideoRenderRect();
   const frameW = Math.max(1, Math.round(videoEl.naturalWidth  || vr.w || 1));
   const frameH = Math.max(1, Math.round(videoEl.naturalHeight || vr.h || 1));
@@ -1141,7 +903,6 @@ async function pushZones() {
 
   const scaled = zones.map(z => {
     if (z.pts) return { ...z, pts: z.pts.map(toFramePoint) };
-    // 兼容旧格式 stop_line（无 pts）
     if (z.type === 'stop_line') {
       const p1 = toFramePoint([z.x1, z.y]);
       const p2 = toFramePoint([z.x2, z.y]);
@@ -1159,13 +920,12 @@ async function pushZones() {
 function toast(msg, type='info') {
   const c = document.getElementById('toasts');
   const t = document.createElement('div');
-  const ico = {success:'✓', error:'✕', info:'ℹ'};
+  const ico = {success:'\u2713', error:'\u2715', info:'\u2139'};
   t.className = `toast ${type}`;
-  t.innerHTML = `<span>${ico[type]||'●'}</span><span>${msg}</span>`;
+  t.innerHTML = `<span>${ico[type]||'\u25cf'}</span><span>${msg}</span>`;
   c.prepend(t);
   setTimeout(()=>t.remove(), 3000);
 }
-
 </script>
 </body>
 </html>
