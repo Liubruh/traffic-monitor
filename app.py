@@ -10,7 +10,7 @@ from datetime import datetime
 from detector import YOLODetector
 from video_source import VideoSource
 from metrics import MetricsTracker
-from violation_engine import ViolationEngine, PedestrianYieldEngine
+from violation_engine import ViolationEngine
 # pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 app = Flask(__name__)
 
@@ -72,8 +72,7 @@ detector = None
 video_source = None
 metrics = MetricsTracker()
 violation_engine = ViolationEngine()
-pedestrian_yield_engine = PedestrianYieldEngine()
-light_tracker = TrafficLightTracker()   # 红绿灯状态时序平滑器
+light_tracker = TrafficLightTracker()
 
 current_frame = None
 frame_lock = threading.Lock()
@@ -158,9 +157,6 @@ def detection_loop():
 
         vio_events = violation_engine.check(results, light_color)
         _record_alert_events(vio_events)
-
-        yield_events = pedestrian_yield_engine.check(results)
-        _record_alert_events(yield_events)
 
         annotated = detector.draw_results(frame, results, violation_zones=current_zones)
 
@@ -252,8 +248,7 @@ def start_detection():
         current_frame = None
         metrics.reset()
         light_tracker.reset()
-        violation_engine.set_zones(current_zones)  # 保留已配置区域
-        pedestrian_yield_engine.set_zones(current_zones)
+        violation_engine.set_zones(current_zones)
         is_running = True
 
         if detection_thread is None or not detection_thread.is_alive():
@@ -326,7 +321,6 @@ def set_zones():
     zones = data.get('zones', [])
     current_zones = zones
     violation_engine.set_zones(zones)
-    pedestrian_yield_engine.set_zones(zones)
     return jsonify({'success': True, 'zone_count': len(zones)})
 
 
