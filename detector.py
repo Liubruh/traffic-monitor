@@ -530,7 +530,7 @@ class YOLODetector:
         color_map = {
             'stop_line':        (30,  30,  220),
             'crosswalk':        (50,  160, 50),
-            'lane_line':        (30,  140, 220),
+
             'traffic_light_roi':(30,  180, 220),  # 琥珀黄
         }
         for zone in zones:
@@ -564,10 +564,6 @@ class YOLODetector:
                                 (pts[0][0]+4, pts[0][1]+18),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
 
-            elif ztype == 'lane_line':
-                pts = zone.get('pts', [])
-                for i in range(len(pts)-1):
-                    cv2.line(frame, tuple(pts[i]), tuple(pts[i+1]), color, 2)
 
             elif ztype == 'traffic_light_roi':
                 pts = zone.get('pts')

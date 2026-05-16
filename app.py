@@ -10,8 +10,7 @@ from datetime import datetime
 from detector import YOLODetector
 from video_source import VideoSource
 from metrics import MetricsTracker
-from violation_engine import ViolationEngine
-from pedestrian_yield_engine import PedestrianYieldEngine
+from violation_engine import ViolationEngine, PedestrianYieldEngine
 # pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 app = Flask(__name__)
 
@@ -280,7 +279,7 @@ def stop_detection():
 
 @app.route('/api/status')
 def get_status():
-    # 返回最近 10 条违规报警（闯红灯、压线等），时间倒序
+    # 返回最近 10 条违规报警，时间倒序
     recent_alerts = list(metrics.alert_log)[-10:][::-1]
     return jsonify({
         'running': is_running,

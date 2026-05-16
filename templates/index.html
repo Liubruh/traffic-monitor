@@ -640,11 +640,11 @@ svg.sparkline { width: 100%; height: 36px; }
     <!-- Zone Editor -->
     <div class="section">
       <div class="section-label">违法检测区域配置</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">在视频上绘制停止线、斑马线、车道线、红绿灯区域</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">在视频上绘制停止线、斑马线、红绿灯区域</div>
       <div class="zone-tool-row">
         <button class="zone-btn" id="zb-stop"   onclick="setZoneTool('stop_line')">停止线</button>
         <button class="zone-btn" id="zb-cross"  onclick="setZoneTool('crosswalk')">斑马线</button>
-        <button class="zone-btn" id="zb-lane"   onclick="setZoneTool('lane_line')">车道线</button>
+
         <button class="zone-btn" id="zb-light"  onclick="setZoneTool('traffic_light_roi')" style="color:#d97706">红绿灯</button>
         <button class="zone-btn" id="zb-none" style="color:var(--red)"  onclick="setZoneTool(null)">退出</button>
       </div>
@@ -668,7 +668,7 @@ let isRunning   = false;
 let pollTimer   = null;
 let seenAlerts  = new Set();
 const HIDDEN_ALERT_KEYWORDS = ['行人未走斑马线', '乱穿马路'];
-let zoneTool    = null;   // 'stop_line' | 'crosswalk' | 'lane_line' | null
+let zoneTool    = null;   // 'stop_line' | 'crosswalk' | 'traffic_light_roi' | null
 let zones       = [];     // committed zones
 let drawingPts  = [];     // in-progress polygon points
 let canvas, ctx, videoEl, videoWrap;
@@ -938,8 +938,8 @@ async function clearAlerts() {
 function setZoneTool(tool) {
   zoneTool   = tool;
   drawingPts = [];
-  ['stop','cross','lane','light'].forEach(k=>document.getElementById('zb-'+k).classList.remove('active'));
-  const map = {stop_line:'stop', crosswalk:'cross', lane_line:'lane', traffic_light_roi:'light'};
+  ['stop','cross','light'].forEach(k=>document.getElementById('zb-'+k).classList.remove('active'));
+  const map = {stop_line:'stop', crosswalk:'cross', traffic_light_roi:'light'};
   if (tool && map[tool]) document.getElementById('zb-'+map[tool]).classList.add('active');
   document.getElementById('videoPanel').classList.toggle('zone-editor-active', !!tool);
   resizeCanvas();
@@ -948,7 +948,7 @@ function setZoneTool(tool) {
   const hints = {
     stop_line:         '点击第一个端点，再点击第二个端点，自动完成（支持斜线）',
     crosswalk:         '单击添加多边形顶点，双击闭合斑马线区域',
-    lane_line:         '单击添加车道线节点，双击结束车道线',
+
     traffic_light_roi: '单击圈出红绿灯所在区域（多边形），双击完成 — 系统将直接对此区域分析灯色',
   };
   document.getElementById('zoneHint').textContent = tool ? hints[tool] : '选择类型后在画面上点击绘制';
@@ -1040,7 +1040,7 @@ function onCanvasDblClick(e) {
 function redrawCanvas(mx, my) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const colorMap = {stop_line:'#ef4444', crosswalk:'#16a34a', lane_line:'#2563eb', traffic_light_roi:'#d97706'};
+  const colorMap = {stop_line:'#ef4444', crosswalk:'#16a34a', traffic_light_roi:'#d97706'};
 
   // 已保存的区域
   zones.forEach(z => {
@@ -1102,7 +1102,7 @@ function redrawCanvas(mx, my) {
 
 function renderZoneList() {
   const el  = document.getElementById('zoneList');
-  const map = {stop_line:'停止线', crosswalk:'斑马线', lane_line:'车道线', traffic_light_roi:'红绿灯区域'};
+  const map = {stop_line:'停止线', crosswalk:'斑马线', traffic_light_roi:'红绿灯区域'};
   if (!zones.length) { el.innerHTML='<div style="color:var(--text3)">尚未配置区域</div>'; return; }
   el.innerHTML = zones.map((z,i)=>`
     <div class="zone-entry">
