@@ -1,1 +1,3 @@
 *.pt
+.claude
+__pycache__
