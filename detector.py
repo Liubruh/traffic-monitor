@@ -252,7 +252,9 @@ class YOLODetector:
                 if lc and lc != 'unknown':
                     parts.append(lc.upper())
             if is_violation:
-                parts.append(f'! {det.violation}')
+                vmap = {'闯红灯': 'RED-LIGHT', '占用斑马线': 'BLOCK XWALK',
+                        '未礼让行人': 'NO YIELD'}
+                parts.append(f'! {vmap.get(det.violation, det.violation)}')
             label = '  '.join(parts)
 
             (lw, lh), bl = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.44, 1)
