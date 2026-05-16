@@ -111,47 +111,35 @@ class YOLODetector:
         return self._detect_ultralytics(frame)
 
     def _detect_ultralytics(self, frame):
+        run_conf = min(_TL_CONF_MIN, self.conf_threshold)
+        infer_kwargs = {'conf': run_conf, 'device': self._infer_device, 'verbose': False}
+        infer_fn = self.yolo
+        if self.enable_bytetrack:
+            infer_fn = self.yolo.track
+            infer_kwargs['persist'] = True
+            infer_kwargs['tracker'] = self.tracker_cfg
+
         results = []
-        try:
-            # 以较低阈值推理，确保远距离小红绿灯不被漏掉
-            run_conf = min(_TL_CONF_MIN, self.conf_threshold)
-            infer_kwargs = {
-                'conf': run_conf,
-                'device': self._infer_device,
-                'verbose': False,
-            }
-            infer_fn = self.yolo
-            if self.enable_bytetrack:
-                infer_fn = self.yolo.track
-                infer_kwargs['persist'] = True
-                infer_kwargs['tracker'] = self.tracker_cfg
+        for box in infer_fn(frame, **infer_kwargs)[0].boxes:
+            cls_id = int(box.cls[0])
+            cls_name = COCO_CLASSES[cls_id] if cls_id < len(COCO_CLASSES) else 'unknown'
+            if self.target_classes and cls_name not in self.target_classes:
+                continue
+            conf = float(box.conf[0])
+            if cls_name != 'traffic light' and conf < self.conf_threshold:
+                continue
 
-            preds = infer_fn(frame, **infer_kwargs)[0]
-            for box in preds.boxes:
-                cls_id   = int(box.cls[0])
-                cls_name = COCO_CLASSES[cls_id] if cls_id < len(COCO_CLASSES) else 'unknown'
-                if self.target_classes and cls_name not in self.target_classes:
-                    continue
-                conf = float(box.conf[0])
-                # 非红绿灯目标仍用原始阈值过滤
-                if cls_name != 'traffic light' and conf < self.conf_threshold:
-                    continue
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                track_id = None
-                if self.enable_bytetrack and hasattr(box, 'id') and box.id is not None:
-                    try:
-                        track_id = int(box.id[0])
-                    except Exception:
-                        track_id = None
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            track_id = None
+            if self.enable_bytetrack and hasattr(box, 'id') and box.id is not None:
+                track_id = int(box.id[0])
 
-                det = DetectionResult([x1, y1, x2, y2], cls_id, cls_name, conf,
-                                      track_id=track_id)
-                if cls_name == 'traffic light':
-                    det.extra['light_color'] = self._detect_light_color(
-                        frame, [x1, y1, x2, y2])
-                results.append(det)
-        except Exception as e:
-            print(f'[Detector] 推理错误: {e}')
+            det = DetectionResult([x1, y1, x2, y2], cls_id, cls_name, conf,
+                                  track_id=track_id)
+            if cls_name == 'traffic light':
+                det.extra['light_color'] = self._detect_light_color(
+                    frame, [x1, y1, x2, y2])
+            results.append(det)
         return results
 
     # ── 红绿灯颜色识别 ────────────────────────────────────────────────

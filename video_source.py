@@ -10,24 +10,19 @@ class VideoSource:
         self.fps = 30
 
     def open(self):
-        try:
-            if self.source_type == 'camera':
-                idx = int(self.source_value) if str(self.source_value).isdigit() else 0
-                self.cap = cv2.VideoCapture(idx)
-                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-                self.cap.set(cv2.CAP_PROP_FPS, 30)
-            elif self.source_type in ('file', 'rtsp'):
-                self.cap = cv2.VideoCapture(self.source_value)
-                if self.source_type == 'file':
-                    self.fps = self.cap.get(cv2.CAP_PROP_FPS) or 25
-            else:
-                return False
-
-            return self.cap.isOpened()
-        except Exception as e:
-            print(f'[VideoSource] 打开失败: {e}')
+        if self.source_type == 'camera':
+            idx = int(self.source_value) if str(self.source_value).isdigit() else 0
+            self.cap = cv2.VideoCapture(idx)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            self.cap.set(cv2.CAP_PROP_FPS, 30)
+        elif self.source_type in ('file', 'rtsp'):
+            self.cap = cv2.VideoCapture(self.source_value)
+            if self.source_type == 'file':
+                self.fps = self.cap.get(cv2.CAP_PROP_FPS) or 25
+        else:
             return False
+        return self.cap.isOpened()
 
     def read(self):
         if self.cap is None or not self.cap.isOpened():
@@ -44,12 +39,4 @@ class VideoSource:
             self.cap.release()
             self.cap = None
 
-    def get_info(self):
-        if self.cap is None:
-            return {}
-        return {
-            'width': int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-            'height': int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-            'fps': self.cap.get(cv2.CAP_PROP_FPS),
-            'source_type': self.source_type,
-        }
+

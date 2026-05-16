@@ -229,9 +229,6 @@ def take_snapshot():
             return jsonify({'success': False, 'message': '无可用画面'})
         frame = current_frame.copy()
 
-    if not os.path.isdir(SNAPSHOT_FOLDER):
-        return jsonify({'success': False, 'message': f'截图目录不存在: {SNAPSHOT_FOLDER}'})
-
     filename = f'snap_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg'
     path = os.path.join(SNAPSHOT_FOLDER, filename)
     cv2.imwrite(path, frame)
@@ -245,8 +242,6 @@ def upload_video():
     f = request.files['file']
     if f.filename == '':
         return jsonify({'success': False, 'message': '文件名为空'})
-    if not os.path.isdir(UPLOAD_FOLDER):
-        return jsonify({'success': False, 'message': f'上传目录不存在: {UPLOAD_FOLDER}'})
     path = os.path.join(UPLOAD_FOLDER, f.filename)
     f.save(path)
     return jsonify({'success': True, 'path': path, 'filename': f.filename})
