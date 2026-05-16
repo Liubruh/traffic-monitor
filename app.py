@@ -4,67 +4,14 @@ import threading
 import os
 import json
 import numpy as np
-from collections import Counter
-from flask import Flask, render_template, Response, jsonify, request, make_response
+from flask import Flask, render_template, Response, jsonify, request
 from datetime import datetime
-from detector import YOLODetector
+from detector import YOLODetector, TrafficLightTracker
 from video_source import VideoSource
 from metrics import MetricsTracker
 from violation_engine import ViolationEngine
 # pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 app = Flask(__name__)
-
-
-class TrafficLightTracker:
-    """
-    时序平滑红绿灯状态。
-
-    单帧颜色检测在目标小、光照变化时容易出错或漏检，本类通过：
-      1. 保留近 history_len 帧的检测颜色
-      2. 当某颜色在历史记录中出现次数 >= min_votes 时才更新稳定状态
-      3. 若超过 persist_secs 秒未检测到红绿灯，稳定状态才重置为 unknown
-
-    这样即使 YOLO 连续几帧漏检，violation_engine 仍能拿到上一个有效颜色。
-    """
-    def __init__(self, history_len=20, min_votes=5, persist_secs=6.0):
-        self._history     = []
-        self._history_len = history_len
-        self._min_votes   = min_votes
-        self._persist_s   = persist_secs
-        self._stable      = 'unknown'
-        self._last_seen   = 0.0
-
-    def update(self, raw_color: str, source: str = 'detector') -> str:
-        now = time.time()
-        if raw_color != 'unknown':
-            self._last_seen = now
-            self._history.append(raw_color)
-            if len(self._history) > self._history_len:
-                self._history.pop(0)
-
-            # 首次锁定或来自检测框的颜色，直接同步，避免开头几帧 unknown
-            if self._stable == 'unknown' or source == 'detector':
-                self._stable = raw_color
-                return self._stable
-
-        # 超时未看到红绿灯 → 状态失效
-        if now - self._last_seen > self._persist_s:
-            self._stable  = 'unknown'
-            self._history = []
-            return self._stable
-
-        # ROI 等弱来源颜色使用多数投票，降低抖动
-        if self._history:
-            top, cnt = Counter(self._history).most_common(1)[0]
-            if cnt >= self._min_votes:
-                self._stable = top
-
-        return self._stable
-
-    def reset(self):
-        self._history   = []
-        self._stable    = 'unknown'
-        self._last_seen = 0.0
 
 
 # 全局状态
@@ -97,6 +44,44 @@ def _record_alert_events(events):
         })
 
 
+def _resolve_light_color(frame, results):
+    tl_dets = [r for r in results if r.class_name == 'traffic light']
+    if tl_dets:
+        tl_dets.sort(key=lambda d: d.confidence, reverse=True)
+        for tl in tl_dets:
+            c = tl.extra.get('light_color', 'unknown')
+            if c != 'unknown':
+                return c, 'detector'
+        return tl_dets[0].extra.get('light_color', 'unknown'), 'detector'
+
+    for zone in current_zones:
+        if zone.get('type') == 'traffic_light_roi':
+            pts = zone.get('pts', [])
+            if len(pts) >= 2:
+                xs = [p[0] for p in pts]
+                ys = [p[1] for p in pts]
+                c = detector._detect_light_color(
+                    frame, [min(xs), min(ys), max(xs), max(ys)])
+                if c != 'unknown':
+                    return c, 'roi'
+            break
+    return 'unknown', 'none'
+
+
+def _overlay_light_status(annotated, light_color):
+    if light_color == 'unknown':
+        return
+    bgr = {'red': (30, 30, 220), 'green': (50, 200, 50),
+           'yellow': (30, 200, 220)}.get(light_color, (180, 180, 180))
+    _, w_a = annotated.shape[:2]
+    label = f'LIGHT: {light_color.upper()}'
+    (lw, lh), bl = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
+    px, py = w_a - lw - 16, 36
+    cv2.rectangle(annotated, (px - 6, py - lh - 6), (px + lw + 6, py + bl + 2), bgr, -1)
+    cv2.putText(annotated, label, (px, py - bl),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2, cv2.LINE_AA)
+
+
 def detection_loop():
     global current_frame, is_running, detector, video_source
 
@@ -112,66 +97,19 @@ def detection_loop():
             time.sleep(0.05)
             continue
 
-        start_time = time.time()
+        t0 = time.time()
         results = detector.detect(frame)
-        elapsed = time.time() - start_time
-
-        fps = 1.0 / elapsed if elapsed > 0 else 0
+        fps = 1.0 / (time.time() - t0) if time.time() > t0 else 0
         metrics.update(fps, results)
 
-        # 违规检测（需先通过 /api/set_zones 配置区域）
-        # 1. 从 YOLO 检测结果取红绿灯颜色
-        raw_light_color = 'unknown'
-        light_source = 'none'
-        tl_dets = [r for r in results if r.class_name == 'traffic light']
-
-        # 红绿灯检测框优先：全局状态与检测框颜色保持同步
-        if tl_dets:
-            tl_dets.sort(key=lambda d: d.confidence, reverse=True)
-            for tl in tl_dets:
-                c = tl.extra.get('light_color', 'unknown')
-                if c != 'unknown':
-                    raw_light_color = c
-                    break
-            if raw_light_color == 'unknown':
-                raw_light_color = tl_dets[0].extra.get('light_color', 'unknown')
-            light_source = 'detector'
-
-        # 2. 仅在未检测到红绿灯框时，才使用 traffic_light_roi 兜底
-        if not tl_dets and raw_light_color == 'unknown' and detector is not None:
-            for zone in current_zones:
-                if zone.get('type') == 'traffic_light_roi':
-                    pts = zone.get('pts', [])
-                    if len(pts) >= 2:
-                        xs = [p[0] for p in pts]
-                        ys = [p[1] for p in pts]
-                        roi_color = detector._detect_light_color(
-                            frame, [min(xs), min(ys), max(xs), max(ys)])
-                        if roi_color != 'unknown':
-                            raw_light_color = roi_color
-                            light_source = 'roi'
-                    break
-
-        # 3. 时序平滑 → 稳定颜色
-        light_color = light_tracker.update(raw_light_color, source=light_source)
+        raw_color, source = _resolve_light_color(frame, results)
+        light_color = light_tracker.update(raw_color, source=source)
 
         vio_events = violation_engine.check(results, light_color)
         _record_alert_events(vio_events)
 
         annotated = detector.draw_results(frame, results, violation_zones=current_zones)
-
-        # 在画面右上角叠加当前稳定红绿灯状态（即使本帧未检测到红绿灯也会显示）
-        if light_color != 'unknown':
-            color_bgr = {'red': (30, 30, 220), 'green': (50, 200, 50),
-                         'yellow': (30, 200, 220)}.get(light_color, (180, 180, 180))
-            _, w_a = annotated.shape[:2]
-            label = f'LIGHT: {light_color.upper()}'
-            (lw, lh), bl = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
-            px, py = w_a - lw - 16, 36
-            cv2.rectangle(annotated, (px - 6, py - lh - 6), (px + lw + 6, py + bl + 2),
-                          color_bgr, -1)
-            cv2.putText(annotated, label, (px, py - bl),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2, cv2.LINE_AA)
+        _overlay_light_status(annotated, light_color)
 
         with frame_lock:
             current_frame = annotated.copy()
@@ -190,16 +128,16 @@ def generate_frames():
             else:
                 frame = current_frame.copy()
 
-        ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        ret, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
         if ret:
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + buf.tobytes() + b'\r\n')
         time.sleep(0.033)
 
 
 @app.route('/')
 def index():
-    resp = make_response(render_template('index.html'))
+    resp = Response(render_template('index.html'))
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
     resp.headers['Expires'] = '0'

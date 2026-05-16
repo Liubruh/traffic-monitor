@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 import datetime
+import time
 import os
+from collections import Counter
 
 COCO_CLASSES = [
     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck',
@@ -319,3 +321,43 @@ class YOLODetector:
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
 
         cv2.addWeighted(overlay, 0.14, frame, 0.86, 0, frame)
+
+
+class TrafficLightTracker:
+    """时序平滑红绿灯状态，避免单帧抖动和短暂漏检。"""
+
+    def __init__(self, history_len=20, min_votes=5, persist_secs=6.0):
+        self._history = []
+        self._history_len = history_len
+        self._min_votes = min_votes
+        self._persist_s = persist_secs
+        self._stable = 'unknown'
+        self._last_seen = 0.0
+
+    def update(self, raw_color, source='detector'):
+        now = time.time()
+        if raw_color != 'unknown':
+            self._last_seen = now
+            self._history.append(raw_color)
+            if len(self._history) > self._history_len:
+                self._history.pop(0)
+            if self._stable == 'unknown' or source == 'detector':
+                self._stable = raw_color
+                return self._stable
+
+        if now - self._last_seen > self._persist_s:
+            self._stable = 'unknown'
+            self._history = []
+            return self._stable
+
+        if self._history:
+            top, cnt = Counter(self._history).most_common(1)[0]
+            if cnt >= self._min_votes:
+                self._stable = top
+
+        return self._stable
+
+    def reset(self):
+        self._history = []
+        self._stable = 'unknown'
+        self._last_seen = 0.0
