@@ -145,7 +145,7 @@ def detection_loop():
                     if len(pts) >= 2:
                         xs = [p[0] for p in pts]
                         ys = [p[1] for p in pts]
-                        roi_color = detector.analyze_region_color(
+                        roi_color = detector._detect_light_color(
                             frame, [min(xs), min(ys), max(xs), max(ys)])
                         if roi_color != 'unknown':
                             raw_light_color = roi_color
