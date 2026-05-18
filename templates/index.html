@@ -5,18 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>交通智能监控系统</title>
 <style>
-/* ── Reset & Variables ─────────────────────────────────────────── */
+/* ── Reset ─────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root{
-  --bg:#f1f5f9;--surface:#fff;--border:#e2e8f0;--hl:#cbd5e1;
-  --text:#0f172a;--text2:#64748b;--text3:#94a3b8;
-  --blue:#2563eb;--blue-bg:#eff6ff;--blue-bd:#bfdbfe;
-  --green:#16a34a;--green-bg:#f0fdf4;--green-bd:#bbf7d0;
-  --red:#dc2626;--red-bg:#fef2f2;--red-bd:#fecaca;
-  --amber:#d97706;--amber-bg:#fffbeb;--amber-bd:#fde68a;
-  --radius:8px;--radius-sm:6px;
-  --font:Inter,system-ui,"PingFang SC","Microsoft YaHei",sans-serif;
+  --bg:#f0f2f5;--surface:#fff;--border:#e5e7eb;--text:#1f2937;--text2:#6b7280;--text3:#9ca3af;
+  --blue:#3b82f6;--blue-bg:#eff6ff;--blue-bd:#bfdbfe;
+  --green:#22c55e;--green-bg:#f0fdf4;--green-bd:#bbf7d0;
+  --red:#ef4444;--red-bg:#fef2f2;--red-bd:#fecaca;
+  --amber:#f59e0b;--amber-bg:#fffbeb;--amber-bd:#fde68a;
+  --radius:10px;--radius-sm:6px;
+  --font:Inter,"PingFang SC","Microsoft YaHei",sans-serif;
   --mono:"SF Mono","Cascadia Code","Consolas",monospace;
 }
 
@@ -28,168 +27,197 @@ body{
 /* ── Header ────────────────────────────────────────────────────── */
 .header{
   background:var(--surface);border-bottom:1px solid var(--border);
-  height:48px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;flex-shrink:0;
+  height:52px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;z-index:10;
 }
-.header-l{display:flex;align-items:center;gap:10px}
-.header-r{display:flex;align-items:center;gap:14px}
+.header-l{display:flex;align-items:center;gap:12px}
+.header-r{display:flex;align-items:center;gap:16px}
 
-.logo{width:28px;height:28px;background:var(--blue);border-radius:7px;
-  display:flex;align-items:center;justify-content:center}
-.logo svg{width:15px;height:15px}
-.title{font-size:15px;font-weight:600}
+.logo{
+  width:32px;height:32px;background:var(--blue);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+}
+.logo svg{width:16px;height:16px}
+.title{font-size:15px;font-weight:600;letter-spacing:-.2px}
 
-.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 12px;
   border-radius:20px;font-size:11px;font-weight:500;
-  background:var(--bg);border:1px solid var(--border);color:var(--text2)}
-.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
-.pill.on{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
+  background  :var(--bg);border:1px solid var(--border);color:var(--text2);
+}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.pill.on{background:var(--green-bg);border-color:var(--green-bd);color:#16a34a}
 .pill.on .dot{background:var(--green);animation:blink 1.4s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
 .clock{font:12px var(--mono);color:var(--text2)}
 
-.light{width:20px;height:20px;border-radius:50%;
+.light{
+  width:22px;height:22px;border-radius:50%;
   border:2px solid var(--border);background:var(--text3);
-  transition:background .3s,box-shadow .3s}
-.light.red{background:#ef4444;box-shadow:0 0 8px #ef444488}
-.light.green{background:#22c55e;box-shadow:0 0 8px #22c55e88}
-.light.yellow{background:#eab308;box-shadow:0 0 8px #eab30888}
+  transition:background .3s,box-shadow .3s;
+}
+.light.red{background:#ef4444;box-shadow:0 0 10px #ef444466}
+.light.green{background:#22c55e;box-shadow:0 0 10px #22c55e66}
+.light.yellow{background:#eab308;box-shadow:0 0 10px #eab30866}
 
 /* ── Layout ─────────────────────────────────────────────────────── */
-.layout{display:grid;grid-template-columns:260px 1fr 260px;flex:1;min-height:0;overflow:hidden}
+.layout{
+  display:flex;align-items:center;justify-content:center;gap:18px;
+  padding:20px 24px;flex:1;min-height:0;overflow:hidden;
+}
 
-/* ── Left sidebar ──────────────────────────────────────────────── */
-.side-l{background:var(--surface);border-right:1px solid var(--border);
-  overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
-.side-l::-webkit-scrollbar{width:3px}
-.side-l::-webkit-scrollbar-thumb{background:var(--hl);border-radius:2px}
+/* ── Sidebar (通用) ─────────────────────────────────────────────── */
+.side-l,.side-r{
+  width:264px;flex-shrink:0;
+  background:var(--surface);border-radius:12px;
+  border:1px solid var(--border);
+  overflow-y:auto;overflow-x:hidden;
+  max-height:calc(100vh - 52px - 40px);
+}
 
 details{border-bottom:1px solid var(--border)}
 details summary{
-  padding:10px 16px;font-size:10px;font-weight:600;text-transform:uppercase;
-  letter-spacing:1.2px;color:var(--text3);cursor:pointer;
-  display:flex;align-items:center;gap:6px;list-style:none;user-select:none}
+  padding:12px 18px;font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:1.5px;color:var(--text3);cursor:pointer;
+  display:flex;align-items:center;gap:6px;list-style:none;user-select:none;
+}
 details summary::-webkit-details-marker{display:none}
 details summary::after{content:'▾';margin-left:auto;font-size:10px;transition:transform .2s}
 details[open] summary::after{transform:rotate(180deg)}
-details .body{padding:0 16px 14px}
+details .body{padding:0 18px 14px}
 
-/* ── Form controls ─────────────────────────────────────────────── */
+/* ── Form ───────────────────────────────────────────────────────── */
 .fld{margin-bottom:10px}
 .fld-lbl{font-size:11px;color:var(--text2);margin-bottom:4px;display:block}
 
 select,input[type=text],input[type=number]{
-  width:100%;height:34px;padding:0 10px;border:1px solid var(--border);
+  width:100%;height:36px;padding:0 10px;border:1px solid var(--border);
   border-radius:var(--radius-sm);background:var(--surface);
   font:12px var(--font);color:var(--text);outline:none;
-  transition:border-color .15s,box-shadow .15s}
-select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb14}
+  transition:border-color .15s,box-shadow .15s;
+}
+select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #3b82f618}
 
-.range-r{display:flex;align-items:center;gap:8px}
+.range-r{display:flex;align-items:center;gap:10px}
 input[type=range]{flex:1;height:4px;-webkit-appearance:none;background:var(--border);border-radius:2px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
-  width:14px;height:14px;border-radius:50%;background:var(--blue);cursor:pointer}
-.range-v{font:11px var(--mono);color:var(--blue);width:34px;text-align:right}
+  width:16px;height:16px;border-radius:50%;background:var(--blue);cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.range-v{font:11px var(--mono);color:var(--blue);min-width:34px;text-align:right}
 
 .tog-r{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .tog-lbl{font-size:12px}
-.toggle{position:relative;width:34px;height:18px;cursor:pointer}
+.toggle{position:relative;width:36px;height:20px;cursor:pointer}
 .toggle input{display:none}
-.toggle .tk{position:absolute;inset:0;border-radius:9px;background:var(--hl);transition:background .2s}
+.toggle .tk{position:absolute;inset:0;border-radius:10px;background:var(--border);transition:background .2s}
 .toggle input:checked~.tk{background:var(--blue)}
-.toggle .th{position:absolute;top:2px;left:2px;width:14px;height:14px;
+.toggle .th{position:absolute;top:2px;left:2px;width:16px;height:16px;
   border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:left .2s}
 .toggle input:checked~.th{left:18px}
 
-/* Checkboxes */
-.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.cb{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:5px;
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.cb{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;
   cursor:pointer;font-size:11.5px;border:1px solid transparent;user-select:none}
 .cb:hover{background:var(--bg)}
 .cb input{display:none}
-.cb .bx{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--hl);
+.cb .bx{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
 .cb input:checked~.bx{background:var(--blue);border-color:var(--blue)}
 .cb .bx svg{display:none}
 .cb input:checked~.bx svg{display:block}
 
-/* Space between form groups */
-details + details { border-top: none; }
-
-/* Buttons */
-.btn{display:block;width:100%;height:34px;border-radius:var(--radius-sm);
+/* ── Buttons ────────────────────────────────────────────────────── */
+.btn{
+  display:block;width:100%;height:36px;border-radius:var(--radius-sm);
   border:1px solid var(--border);background:var(--surface);color:var(--text);
   font:12px/1 var(--font);font-weight:500;cursor:pointer;
-  transition:all .15s;margin-bottom:6px;letter-spacing:.2px}
-.btn:hover{background:var(--bg);border-color:var(--hl)}
+  transition:all .15s;margin-bottom:6px;
+}
+.btn:hover{background:var(--bg);border-color:var(--border)}
 .btn:active{transform:scale(.98)}
-.btn.pri{background:var(--blue);border-color:var(--blue);color:white}
-.btn.pri:hover{background:#1d4ed8}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.pri:hover{background:#2563eb;border-color:#2563eb}
 .btn.danger{border-color:var(--red-bd);color:var(--red)}
 .btn.danger:hover{background:var(--red-bg)}
-.btn.succ{border-color:var(--green-bd);color:var(--green)}
+.btn.succ{border-color:var(--green-bd);color:#16a34a}
 .btn.succ:hover{background:var(--green-bg)}
 .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
-/* Upload zone */
-.upload{border:1.5px dashed var(--hl);border-radius:var(--radius-sm);
-  padding:12px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:6px}
+.upload{
+  border:1.5px dashed var(--border);border-radius:var(--radius-sm);
+  padding:14px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:8px;
+  background:var(--bg);
+}
 .upload:hover{border-color:var(--blue);background:var(--blue-bg)}
 .upload input{display:none}
-.upload .ico{font-size:16px;margin-bottom:2px}
+.upload .ico{font-size:20px;margin-bottom:4px}
 .upload .hint{font-size:10px;color:var(--text3)}
-.upload .name{font-size:11px;color:var(--blue);margin-top:4px}
+.upload .name{font-size:11px;color:var(--blue);margin-top:4px;font-weight:500}
 
-/* ── Video center ──────────────────────────────────────────────── */
-.video-panel{background:#0f172a;display:flex;flex-direction:column;position:relative}
-.video-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
+/* ── Video Panel ────────────────────────────────────────────────── */
+.video-panel{
+  flex:1;max-width:1200px;
+  aspect-ratio:16/9;
+  max-height:calc(100vh - 52px - 32px);
+  display:flex;flex-direction:column;
+  background:#111827;border-radius:12px;overflow:hidden;
+  box-shadow:0 2px 16px rgba(0,0,0,.12);
+  min-width:0;
+}
+.video-wrap{
+  flex:1;min-height:0;position:relative;
+  background:#000;
+}
 .video-stream{width:100%;height:100%;object-fit:contain;display:block}
 #zoneCanvas{position:absolute;inset:0;cursor:crosshair;display:none}
 .zone-editor-active #zoneCanvas{display:block}
 
-.video-bar{background:var(--surface);border-top:1px solid var(--border);
-  padding:5px 14px;display:flex;align-items:center;gap:18px;flex-shrink:0}
-.vb{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}
-.vb .v{font:500 12px var(--mono);color:var(--text)}
-.vb .v.c1{color:var(--blue)}.vb .v.c2{color:var(--green)}.vb .v.c3{color:var(--red)}.vb .v.c4{color:var(--amber)}
+.video-bar{
+  background:#1f2937;padding:8px 20px;display:flex;align-items:center;gap:28px;
+  flex-shrink:0;border-top:1px solid #374151;
+}
+.vb{display:flex;align-items:center;gap:5px;font-size:11px;color:#9ca3af}
+.vb .v{font:500 13px var(--mono);color:#e5e7eb}
+.vb .v.c1{color:#60a5fa}.vb .v.c2{color:#4ade80}.vb .v.c3{color:#f87171}.vb .v.c4{color:#fbbf24}
 
-/* ── Right sidebar ─────────────────────────────────────────────── */
-.side-r{background:var(--surface);border-left:1px solid var(--border);
-  overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding-bottom:10px}
-.side-r::-webkit-scrollbar{width:3px}
-.side-r::-webkit-scrollbar-thumb{background:var(--hl);border-radius:2px}
+/* ── Right Sidebar Content ──────────────────────────────────────── */
+.sec{padding:14px 18px;border-bottom:1px solid var(--border)}
+.sec-lbl{
+  font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:1px;color:var(--text3);margin-bottom:10px;
+}
 
-.sec{padding:12px 14px;border-bottom:1px solid var(--border)}
-.sec-lbl{font-size:10px;font-weight:600;text-transform:uppercase;
-  letter-spacing:1px;color:var(--text3);margin-bottom:10px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.mcard{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px 12px;
+}
+.mcard .mn{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:3px}
+.mcard .mv{font:500 18px var(--mono)}
+.mcard .mv.c1{color:var(--blue)}.mcard .mv.c2{color:#16a34a}.mcard .mv.c3{color:var(--red)}
 
-/* Metrics */
-.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
-.mcard{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px}
-.mcard .mn{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:2px}
-.mcard .mv{font:500 17px var(--mono)}
-.mcard .mv.c1{color:var(--blue)}.mcard .mv.c2{color:var(--green)}.mcard .mv.c3{color:var(--red)}
+.spark{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px;margin-bottom:8px;
+}
+.spark .sl{font-size:9px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.8px}
+.spark svg{width:100%;height:36px}
 
-.spark{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px}
-.spark .sl{font-size:9px;color:var(--text3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.8px}
-.spark svg{width:100%;height:32px}
-
-/* Vehicle records */
-#vehicleRecords{max-height:80px;overflow-y:auto;scrollbar-gutter:stable}
-.vrow{display:flex;justify-content:space-between;align-items:center;
-  padding:4px 8px;border-radius:5px;margin-bottom:3px;font-size:11px}
+#vehicleRecords{max-height:80px;overflow-y:auto}
+.vrow{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 10px;border-radius:5px;margin-bottom:3px;font-size:11px;
+}
 .vrow.c1{background:var(--blue-bg);color:var(--blue)}
-.vrow.c2{background:var(--green-bg);color:var(--green)}
-.vrow.c4{background:var(--amber-bg);color:var(--amber)}
+.vrow.c2{background:var(--green-bg);color:#16a34a}
+.vrow.c4{background:var(--amber-bg);color:#d97706}
 .vrow .vc{font:500 11px var(--mono)}
 
-/* Alerts */
-.alert-scroll{max-height:130px;overflow-y:auto;scrollbar-gutter:stable}
-.alert-scroll::-webkit-scrollbar{width:3px}
-.alert-scroll::-webkit-scrollbar-thumb{background:var(--hl)}
-.acard{border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:5px;
-  border-left:3px solid var(--hl);background:var(--bg);animation:in .25s ease}
+.alert-scroll{max-height:140px;overflow-y:auto}
+.acard{
+  border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:6px;
+  border-left:3px solid var(--border);background:var(--bg);animation:in .25s ease;
+}
 .acard.danger{border-left-color:var(--red);background:var(--red-bg)}
 .acard.warning{border-left-color:var(--amber);background:var(--amber-bg)}
 .acard.info{border-left-color:var(--blue);background:var(--blue-bg)}
@@ -199,35 +227,40 @@ details + details { border-top: none; }
 .acard .atm{font:10px var(--mono);color:var(--text3)}
 .acard .am{font-size:11.5px}
 
-/* Zone editor */
-.ztools{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-.zbtn{flex:1;min-width:56px;height:30px;border-radius:20px;border:1px solid var(--border);
-  background:var(--surface);font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s}
+/* ── Zone Editor ────────────────────────────────────────────────── */
+.ztools{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.zbtn{
+  flex:1;min-width:56px;height:32px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface);font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s;
+}
 .zbtn:hover{background:var(--bg)}
 .zbtn.active{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);font-weight:500}
 .zbtn.exit{color:var(--red);border-color:transparent}
 .zbtn.exit:hover{background:var(--red-bg)}
-.zlist{font-size:11px;color:var(--text2);max-height:72px;overflow-y:auto;scrollbar-gutter:stable}
+.zlist{font-size:11px;color:var(--text2);max-height:72px;overflow-y:auto}
 .zent{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)}
 .zent:last-child{border:none}
 .zent .zdel{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px}
 .zent .zdel:hover{color:var(--red)}
 .zinfo{font-size:11px;color:var(--text2);margin-bottom:8px}
 
-/* ── Toasts ────────────────────────────────────────────────────── */
-.toasts{position:fixed;bottom:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px}
-.toast{background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.1);font-size:12px;
-  display:flex;align-items:center;gap:8px;min-width:200px;animation:tin .25s ease}
+/* ── Toasts ─────────────────────────────────────────────────────── */
+.toasts{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px 16px;box-shadow:0 4px 20px rgba(0,0,0,.1);font-size:12px;
+  display:flex;align-items:center;gap:8px;min-width:200px;animation:tin .25s ease;
+}
 .toast.success{border-left:3px solid var(--green)}
 .toast.error{border-left:3px solid var(--red)}
 .toast.info{border-left:3px solid var(--blue)}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}}
 
-/* ── Global scrollbar ──────────────────────────────────────────── */
+/* ── Scrollbar ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--hl);border-radius:2px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
 </style>
 </head>
 <body>
@@ -245,9 +278,9 @@ details + details { border-top: none; }
     <div class="title">交通智能监控系统</div>
   </div>
   <div class="header-r">
-    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)">
       信号灯
-      <div class="light" id="lightIndicator" title="当前信号灯状态"></div>
+      <div class="light" id="lightIndicator" title="信号灯状态"></div>
       <span id="lightText" style="font:10px var(--mono)">--</span>
     </div>
     <div class="clock" id="clock">--:--:--</div>
@@ -255,10 +288,9 @@ details + details { border-top: none; }
   </div>
 </header>
 
-<!-- Layout -->
 <div class="layout">
 
-  <!-- LEFT sidebar ────────────────────────────────────────────── -->
+  <!-- LEFT ─────────────────────────────────────────────────────── -->
   <div class="side-l">
 
     <details open>
@@ -287,7 +319,7 @@ details + details { border-top: none; }
             <div class="hint">点击上传视频文件</div>
             <div class="name" id="fileName"></div>
           </div>
-          <label class="fld-lbl">或直接输入路径</label>
+          <label class="fld-lbl">或输入路径</label>
           <input type="text" id="filePath" placeholder="uploads/video.mp4">
         </div>
       </div>
@@ -316,14 +348,13 @@ details + details { border-top: none; }
           </div>
         </div>
         <div class="tog-r">
-          <span class="tog-lbl">启用 GPU 加速</span>
-          <label class="toggle" title="需要 CUDA / Apple MPS">
+          <span class="tog-lbl">启用 GPU</span>
+          <label class="toggle">
             <input type="checkbox" id="useGPU" checked>
-            <div class="tk"></div>
-            <div class="th"></div>
+            <div class="tk"></div><div class="th"></div>
           </label>
         </div>
-        <div id="deviceInfo" style="font-size:10px;color:var(--text3);margin-top:2px"></div>
+        <div id="deviceInfo" style="font-size:10px;color:var(--text3);margin-top:4px"></div>
       </div>
     </details>
 
@@ -363,7 +394,7 @@ details + details { border-top: none; }
 
   </div>
 
-  <!-- CENTER: Video ────────────────────────────────────────────── -->
+  <!-- CENTER ───────────────────────────────────────────────────── -->
   <div class="video-panel" id="videoPanel">
     <div class="video-wrap" id="videoWrap">
       <img class="video-stream" id="videoFeed" src="/video_feed">
@@ -378,7 +409,7 @@ details + details { border-top: none; }
     </div>
   </div>
 
-  <!-- RIGHT sidebar ────────────────────────────────────────────── -->
+  <!-- RIGHT ────────────────────────────────────────────────────── -->
   <div class="side-r">
 
     <div class="sec">
@@ -394,18 +425,18 @@ details + details { border-top: none; }
         <svg id="fpsChart" viewBox="0 0 228 36" preserveAspectRatio="none">
           <defs>
             <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#2563eb" stop-opacity=".25"/>
-              <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+              <stop offset="0%" stop-color="#3b82f6" stop-opacity=".25"/>
+              <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
             </linearGradient>
           </defs>
           <polygon id="fpsFill" fill="url(#g1)"/>
-          <polyline id="fpsLine" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+          <polyline id="fpsLine" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
         </svg>
       </div>
     </div>
 
     <div class="sec">
-      <div class="sec-lbl">车辆记录</div>
+      <div class="sec-lbl">检测类别</div>
       <div id="vehicleRecords"><div style="color:var(--text3);font-size:11px">等待检测...</div></div>
     </div>
 
@@ -419,24 +450,23 @@ details + details { border-top: none; }
     </div>
 
     <div class="sec">
-      <div class="sec-lbl">违法检测区域配置</div>
-      <div class="zinfo">在视频上绘制停止线、斑马线、红绿灯区域</div>
+      <div class="sec-lbl">检测区域配置</div>
+      <div class="zinfo">在画面上绘制停止线、斑马线、红绿灯区域</div>
       <div class="ztools">
         <button class="zbtn" id="zb-stop"   onclick="setZoneTool('stop_line')">停止线</button>
         <button class="zbtn" id="zb-cross"  onclick="setZoneTool('crosswalk')">斑马线</button>
-        <button class="zbtn" id="zb-light"  onclick="setZoneTool('traffic_light_roi')" style="color:var(--amber)">红绿灯</button>
+        <button class="zbtn" id="zb-light"  onclick="setZoneTool('traffic_light_roi')" style="color:#d97706">红绿灯</button>
         <button class="zbtn exit" id="zb-none" onclick="setZoneTool(null)">退出</button>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px" id="zoneHint">选择类型后在画面上点击绘制</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:10px" id="zoneHint">选择类型后在画面上点击绘制</div>
       <div class="zlist" id="zoneList"><div style="color:var(--text3)">尚未配置区域</div></div>
-      <button class="btn" style="margin-top:8px" onclick="pushZones()">应用区域配置</button>
-      <button class="btn danger" onclick="clearZones()" style="margin-top:0">清除所有区域</button>
+      <button class="btn" style="margin-top:10px" onclick="pushZones()">应用区域配置</button>
+      <button class="btn danger" onclick="clearZones()">清除所有区域</button>
     </div>
 
   </div>
 </div>
 
-<!-- Toasts -->
 <div class="toasts" id="toasts"></div>
 
 <script>
@@ -452,90 +482,68 @@ let canvas, ctx, videoEl, videoWrap;
 
 // ── Init ──────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
-  canvas   = document.getElementById('zoneCanvas');
-  ctx      = canvas.getContext('2d');
-  videoEl  = document.getElementById('videoFeed');
+  canvas    = document.getElementById('zoneCanvas');
+  ctx       = canvas.getContext('2d');
+  videoEl   = document.getElementById('videoFeed');
   videoWrap = document.getElementById('videoWrap');
   canvas.addEventListener('click',     onCanvasClick);
   canvas.addEventListener('mousemove', onCanvasMove);
   canvas.addEventListener('dblclick',  onCanvasDblClick);
-  window.addEventListener('resize', () => {
-    resizeCanvas();
-    redrawCanvas();
-  });
-  videoEl.addEventListener('load', () => {
-    resizeCanvas();
-    redrawCanvas();
-  });
+  window.addEventListener('resize', () => { resizeCanvas(); redrawCanvas(); });
+  videoEl.addEventListener('load', () => { resizeCanvas(); redrawCanvas(); });
   setInterval(updateClock, 1000);
   updateClock();
   loadModelStats();
 });
 
-const COCO_MAP = { n: '52.4', s: '61.8', m: '67.2', l: '69.8', x: '71.0' };
+const COCO_MAP = { n:'52.4', s:'61.8', m:'67.2', l:'69.8', x:'71.0' };
 
-async function loadModelStats() {
-  updateMapDisplay();
-}
-
+async function loadModelStats() { updateMapDisplay(); }
 document.getElementById('modelSize').addEventListener('change', updateMapDisplay);
 
 async function updateMapDisplay() {
-  const sel   = document.getElementById('modelSize').value;
-  const el    = document.getElementById('mMap');
-  const label = document.getElementById('mMapLabel');
-
-  if (sel === 'finetune') {
+  const sel = document.getElementById('modelSize').value;
+  const el  = document.getElementById('mMap');
+  const lb  = document.getElementById('mMapLabel');
+  if (sel==='finetune') {
     try {
-      const r = await fetch('/api/model_stats');
-      const d = await r.json();
-      if (d.map50 !== null && d.map50 !== undefined) {
-        el.textContent  = d.map50 + '%';
-        label.textContent = '微调';
-        el.title = `微调模型验证集 mAP@50，box_loss_weight=${d.box_loss_weight ?? 8.0}`;
-      } else {
-        el.textContent  = '--';
-        label.textContent = '微调';
-        el.title = '运行 train.py 训练后自动更新';
-      }
-    } catch(e) {
-      el.textContent = '--';
-    }
+      const r = await fetch('/api/model_stats'), d = await r.json();
+      if (d.map50!=null) { el.textContent=d.map50+'%'; lb.textContent='微调'; el.title=`微调 mAP@50`; }
+      else { el.textContent='--'; lb.textContent='微调'; el.title='运行 train.py 训练后更新'; }
+    } catch(e) { el.textContent='--'; }
   } else {
-    const v = COCO_MAP[sel];
-    el.textContent  = v ? v + '%' : '--';
-    label.textContent = 'COCO基准';
-    el.title = `YOLOv8${sel} 在 COCO val 数据集上的官方基准 mAP@50`;
+    el.textContent = (COCO_MAP[sel]||'--')+'%';
+    lb.textContent = 'COCO基准';
+    el.title = `YOLOv8${sel} COCO 基准 mAP@50`;
   }
 }
 
 function updateClock() {
-  document.getElementById('clock').textContent =
-    new Date().toTimeString().slice(0, 8);
+  document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
 }
 
 function onSourceChange() {
   const t = document.getElementById('sourceType').value;
-  document.getElementById('camField').style.display  = t==='camera' ? '' : 'none';
-  document.getElementById('rtspField').style.display = t==='rtsp'   ? '' : 'none';
-  document.getElementById('fileField').style.display = t==='file'   ? '' : 'none';
+  document.getElementById('camField').style.display  = t==='camera'?'':'none';
+  document.getElementById('rtspField').style.display = t==='rtsp'?'':'none';
+  document.getElementById('fileField').style.display = t==='file'?'':'none';
 }
 
-// ── File upload ───────────────────────────────────────────────────
+// ── File Upload ───────────────────────────────────────────────────
 async function onFileUpload(ev) {
   const file = ev.target.files[0];
   if (!file) return;
-  const fd = new FormData(); fd.append('file', file);
-  const r  = await fetch('/api/upload_video', {method:'POST', body:fd});
-  const d  = await r.json();
+  const fd = new FormData(); fd.append('file',file);
+  const r = await fetch('/api/upload_video',{method:'POST',body:fd});
+  const d = await r.json();
   if (d.success) {
     document.getElementById('filePath').value = d.path;
-    document.getElementById('fileName').textContent  = d.filename;
-    toast('文件上传成功', 'success');
-  } else toast(d.message, 'error');
+    document.getElementById('fileName').textContent = d.filename;
+    toast('文件上传成功','success');
+  } else toast(d.message,'error');
 }
 
-// ── Get checked classes ───────────────────────────────────────────
+// ── Target classes ────────────────────────────────────────────────
 function getClasses() {
   return [...document.querySelectorAll('.cb input:checked')].map(e=>e.value);
 }
@@ -546,68 +554,59 @@ async function startDetection() {
   let sv = st==='camera' ? document.getElementById('camIdx').value
          : st==='rtsp'   ? document.getElementById('rtspUrl').value
          : document.getElementById('filePath').value;
-  if (!sv && st!=='camera') { toast('请填写视频源', 'error'); return; }
+  if (!sv && st!=='camera') { toast('请填写视频源','error'); return; }
 
   const payload = {
-    source_type:    st,
-    source_value:   sv || '0',
-    model_size:     document.getElementById('modelSize').value,
-    conf_threshold: document.getElementById('confSlider').value,
-    target_classes: getClasses(),
-    use_gpu:        document.getElementById('useGPU').checked,
+    source_type:st, source_value:sv||'0',
+    model_size:document.getElementById('modelSize').value,
+    conf_threshold:document.getElementById('confSlider').value,
+    target_classes:getClasses(),
+    use_gpu:document.getElementById('useGPU').checked,
   };
 
-  toast('正在启动...', 'info');
-  const r = await fetch('/api/start', {method:'POST',
-    headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  toast('正在启动...','info');
+  const r = await fetch('/api/start',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const d = await r.json();
   if (d.success) {
-    isRunning = true;
-    setUI(true);
-    if (d.device) document.getElementById('deviceInfo').textContent = '设备: ' + d.device;
-    startPoll();
-    toast('检测已启动', 'success');
-    await pushZones();
-  } else toast(d.message, 'error');
+    isRunning=true; setUI(true);
+    if (d.device) document.getElementById('deviceInfo').textContent='设备: '+d.device;
+    startPoll(); toast('检测已启动','success'); await pushZones();
+  } else toast(d.message,'error');
 }
 
 async function stopDetection() {
-  await fetch('/api/stop', {method:'POST'});
-  isRunning = false;
-  setUI(false);
-  stopPoll();
-  toast('检测已停止', 'info');
+  await fetch('/api/stop',{method:'POST'});
+  isRunning=false; setUI(false); stopPoll(); toast('检测已停止','info');
 }
 
 function setUI(running) {
   document.getElementById('btnStart').disabled = running;
   document.getElementById('btnStop').disabled  = !running;
-  const pill = document.getElementById('statusPill');
-  const txt  = document.getElementById('statusText');
-  pill.className = 'pill' + (running ? ' on' : '');
-  txt.textContent = running ? '检测中' : '待机';
+  const p = document.getElementById('statusPill');
+  const t = document.getElementById('statusText');
+  p.className = 'pill'+(running?' on':'');
+  t.textContent = running?'检测中':'待机';
 }
 
 // ── Polling ───────────────────────────────────────────────────────
 function startPoll() { pollTimer = setInterval(fetchStatus, 900); }
-function stopPoll()  { clearInterval(pollTimer); pollTimer = null; }
+function stopPoll()  { clearInterval(pollTimer); pollTimer=null; }
 
 async function fetchStatus() {
   try {
-    const r = await fetch('/api/status');
-    const d = await r.json();
-    updateMetrics(d.metrics);
-    updateAlerts(d.alerts);
-    updateLightIndicator(d.light_color || 'unknown');
-    if (d.device) document.getElementById('deviceInfo').textContent = '设备: ' + d.device;
+    const r = await fetch('/api/status'), d = await r.json();
+    updateMetrics(d.metrics); updateAlerts(d.alerts);
+    updateLightIndicator(d.light_color||'unknown');
+    if (d.device) document.getElementById('deviceInfo').textContent='设备: '+d.device;
   } catch(e) {}
 }
 
 function updateLightIndicator(color) {
   const el = document.getElementById('lightIndicator');
-  el.className = 'light ' + (color !== 'unknown' ? color : '');
+  el.className = 'light '+(color!=='unknown'?color:'');
   document.getElementById('lightText').textContent =
-    {red:'红灯', green:'绿灯', yellow:'黄灯'}[color] || '--';
+    {red:'红灯',green:'绿灯',yellow:'黄灯'}[color]||'--';
 }
 
 // ── Metrics ───────────────────────────────────────────────────────
@@ -616,42 +615,37 @@ function updateMetrics(m) {
   document.getElementById('vbFps').textContent    = m.fps;
   document.getElementById('vbObj').textContent    = m.avg_detections;
   document.getElementById('vbFrames').textContent = m.total_frames;
-  document.getElementById('vbVio').textContent    = m.total_violations || 0;
+  document.getElementById('vbVio').textContent    = m.total_violations||0;
   document.getElementById('vbElapsed').textContent= m.elapsed;
   document.getElementById('mFps').textContent     = m.fps;
   document.getElementById('mDet').textContent     = m.avg_detections;
   document.getElementById('mFrames').textContent  = m.total_frames.toLocaleString();
-  drawSparkline(m.fps_history || []);
-  updateVehicleRecords(m.current_classes || {});
+  drawSparkline(m.fps_history||[]);
+  updateVehicleRecords(m.current_classes||{});
 }
 
 function drawSparkline(hist) {
   if (!hist.length) return;
-  const W=228, H=36, p=3;
-  const mx = Math.max(...hist, 1);
+  const W=228, H=36, p=3, mx=Math.max(...hist,1);
   const pts = hist.map((v,i)=>{
-    const x = p + i/(hist.length-1||1)*(W-2*p);
-    const y = H-p-(v/mx)*(H-2*p);
+    const x=p + i/(hist.length-1||1)*(W-2*p);
+    const y=H-p-(v/mx)*(H-2*p);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
-  document.getElementById('fpsLine').setAttribute('points', pts);
+  document.getElementById('fpsLine').setAttribute('points',pts);
   document.getElementById('fpsFill').setAttribute('points',
-    pts + ` ${(W-p).toFixed(1)},${H} ${p},${H}`);
+    pts+` ${(W-p).toFixed(1)},${H} ${p},${H}`);
 }
 
-function updateVehicleRecords(currentClasses) {
+function updateVehicleRecords(cc) {
   const el = document.getElementById('vehicleRecords');
   const order  = ['car','truck','bus','motorcycle','bicycle','person'];
-  const labels = {car:'轿车', truck:'卡车', bus:'公交车', motorcycle:'摩托车', bicycle:'自行车', person:'行人'};
-  const colors = {car:'c1', truck:'c4', bus:'c4', motorcycle:'c1', bicycle:'c1', person:'c2'};
+  const labels = {car:'轿车',truck:'卡车',bus:'公交车',motorcycle:'摩托车',bicycle:'自行车',person:'行人'};
+  const colors = {car:'c1',truck:'c4',bus:'c4',motorcycle:'c1',bicycle:'c1',person:'c2'};
   const units  = {person:'人'};
-  const arr = order.filter(k => (currentClasses[k] || 0) > 0)
-                   .map(k => [k, currentClasses[k]]);
-  if (!arr.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:11px">等待检测...</div>';
-    return;
-  }
-  el.innerHTML = arr.map(([k, v]) => `
+  const arr = order.filter(k=>(cc[k]||0)>0).map(k=>[k,cc[k]]);
+  if (!arr.length) { el.innerHTML='<div style="color:var(--text3);font-size:11px">等待检测...</div>'; return; }
+  el.innerHTML = arr.map(([k,v])=>`
     <div class="vrow ${colors[k]||'c1'}">
       <span>${labels[k]||k}</span>
       <span class="vc">${v} ${units[k]||'辆'}</span>
@@ -660,68 +654,39 @@ function updateVehicleRecords(currentClasses) {
 
 // ── Alerts ────────────────────────────────────────────────────────
 function updateAlerts(alerts) {
-  const src = alerts || [];
-  const visibleAlerts = src.filter(a => {
-    const t = String(a?.type || '');
-    const m = String(a?.message || '');
-    return !HIDDEN_ALERT_KEYWORDS.some(k => t.includes(k) || m.includes(k));
+  const src = alerts||[];
+  const vis = src.filter(a=>{
+    const t=String(a?.type||''), m=String(a?.message||'');
+    return !HIDDEN_ALERT_KEYWORDS.some(k=>t.includes(k)||m.includes(k));
   });
-
   const badge = document.getElementById('alertBadge');
-  if (!visibleAlerts.length) {
-    document.getElementById('alertList').innerHTML = '<div style="color:var(--text3);font-size:11px">暂无违规</div>';
-    badge.style.display = 'none';
-    return;
+  if (!vis.length) {
+    document.getElementById('alertList').innerHTML='<div style="color:var(--text3);font-size:11px">暂无违规</div>';
+    badge.style.display='none'; return;
   }
-
-  visibleAlerts.forEach(a => seenAlerts.add(a.id));
-  badge.style.display = '';
-  badge.textContent   = seenAlerts.size;
-  document.getElementById('alertList').innerHTML = visibleAlerts.map(a=>`
+  vis.forEach(a=>seenAlerts.add(a.id));
+  badge.style.display=''; badge.textContent=seenAlerts.size;
+  document.getElementById('alertList').innerHTML=vis.map(a=>`
     <div class="acard ${a.level}">
-      <div class="at">
-        <span class="att">${a.type}</span>
-        <span class="atm">${a.time}</span>
-      </div>
+      <div class="at"><span class="att">${a.type}</span><span class="atm">${a.time}</span></div>
       <div class="am">${a.message}</div>
     </div>`).join('');
 }
 
-// ── Snapshot ──────────────────────────────────────────────────────
+// ── Snapshot / Clear ──────────────────────────────────────────────
 async function takeSnapshot() {
-  const r = await fetch('/api/snapshot', {method:'POST'});
-  const d = await r.json();
-  if (d.success) {
-    toast('截图已保存：' + d.filename, 'success');
-  } else toast(d.message, 'error');
+  const r=await fetch('/api/snapshot',{method:'POST'}), d=await r.json();
+  d.success?toast('截图已保存: '+d.filename,'success'):toast(d.message,'error');
 }
-
 async function clearAlerts() {
   await fetch('/api/alerts/clear',{method:'POST'});
   document.getElementById('alertList').innerHTML='<div style="color:var(--text3);font-size:11px">暂无报警</div>';
-  document.getElementById('alertBadge').style.display='none';
-  seenAlerts.clear();
-  toast('已清空报警记录', 'info');
+  document.getElementById('alertBadge').style.display='none'; seenAlerts.clear(); toast('已清空','info');
 }
 
-// ── Zone Editor ───────────────────────────────────────────────────
-function setZoneTool(tool) {
-  zoneTool   = tool;
-  drawingPts = [];
-  ['stop','cross','light'].forEach(k=>document.getElementById('zb-'+k).classList.remove('active'));
-  const map = {stop_line:'stop', crosswalk:'cross', traffic_light_roi:'light'};
-  if (tool && map[tool]) document.getElementById('zb-'+map[tool]).classList.add('active');
-  document.getElementById('videoPanel').classList.toggle('zone-editor-active', !!tool);
-  resizeCanvas();
-  redrawCanvas();
-
-  const hints = {
-    stop_line:         '点击第一个端点，再点击第二个端点，自动完成（支持斜线）',
-    crosswalk:         '单击添加多边形顶点，双击闭合斑马线区域',
-    traffic_light_roi: '单击圈出红绿灯所在区域（多边形），双击完成',
-  };
-  document.getElementById('zoneHint').textContent = tool ? hints[tool] : '选择类型后在画面上点击绘制';
-}
+// ══════════════════════════════════════════════════════════════════
+// Zone Editor — 坐标归一化存储，不受窗口大小影响
+// ══════════════════════════════════════════════════════════════════
 
 function resizeCanvas() {
   canvas.width  = videoWrap.offsetWidth;
@@ -729,202 +694,151 @@ function resizeCanvas() {
 }
 
 function getVideoRenderRect() {
-  const cw = canvas.width || 1;
-  const ch = canvas.height || 1;
-  const nw = videoEl.naturalWidth || cw;
-  const nh = videoEl.naturalHeight || ch;
-  const videoRatio = nh > 0 ? (nw / nh) : (cw / ch);
-  const canvasRatio = cw / ch;
-
-  let w = cw;
-  let h = ch;
-  let x = 0;
-  let y = 0;
-
-  if (videoRatio > 0) {
-    if (canvasRatio > videoRatio) {
-      h = ch;
-      w = h * videoRatio;
-      x = (cw - w) / 2;
-    } else {
-      w = cw;
-      h = w / videoRatio;
-      y = (ch - h) / 2;
-    }
-  }
-
-  return { x, y, w, h, nw, nh };
+  const cw=canvas.width||1, ch=canvas.height||1;
+  const nw=videoEl.naturalWidth||cw, nh=videoEl.naturalHeight||ch;
+  const vr=nw/Math.max(nh,1), cr=cw/Math.max(ch,1);
+  let w,h,x,y;
+  if (cr>vr) { h=ch; w=h*vr; x=(cw-w)/2; y=0; }
+  else       { w=cw; h=w/vr; x=0; y=(ch-h)/2; }
+  return {x,y,w,h,nw,nh};
 }
 
-function pointInVideoRect(x, y, r) {
-  return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+// 画布像素 → 归一化坐标 (0~1，相对于视频画面区域)
+function toNorm(cx, cy) {
+  const r = getVideoRenderRect();
+  return [(cx-r.x)/(r.w||1), (cy-r.y)/(r.h||1)];
+}
+
+// 归一化坐标 → 当前画布像素
+function toCanvas(np) {
+  const r = getVideoRenderRect();
+  return [r.x+np[0]*r.w, r.y+np[1]*r.h];
+}
+
+function setZoneTool(tool) {
+  zoneTool=tool; drawingPts=[];
+  ['stop','cross','light'].forEach(k=>document.getElementById('zb-'+k).classList.remove('active'));
+  const m={stop_line:'stop',crosswalk:'cross',traffic_light_roi:'light'};
+  if (tool&&m[tool]) document.getElementById('zb-'+m[tool]).classList.add('active');
+  document.getElementById('videoPanel').classList.toggle('zone-editor-active',!!tool);
+  resizeCanvas(); redrawCanvas();
+  const h={stop_line:'点击第一个端点，再点击第二个端点',crosswalk:'单击添加多边形顶点，双击闭合',traffic_light_roi:'单击圈出红绿灯区域，双击完成'};
+  document.getElementById('zoneHint').textContent=tool?h[tool]:'选择类型后在画面上点击绘制';
 }
 
 function onCanvasClick(e) {
   if (!zoneTool) return;
-  const r   = canvas.getBoundingClientRect();
-  const x   = Math.round(e.clientX - r.left);
-  const y   = Math.round(e.clientY - r.top);
-  const vr  = getVideoRenderRect();
+  const r=canvas.getBoundingClientRect();
+  const cx=Math.round(e.clientX-r.left), cy=Math.round(e.clientY-r.top);
+  const vr=getVideoRenderRect();
+  if (cx<vr.x||cx>vr.x+vr.w||cy<vr.y||cy>vr.y+vr.h) return;
 
-  if (!pointInVideoRect(x, y, vr)) return;
-
-  if (zoneTool === 'stop_line') {
-    drawingPts.push([x, y]);
-    if (drawingPts.length >= 2) {
-      zones.push({ type: 'stop_line', pts: [...drawingPts] });
-      drawingPts = [];
-      renderZoneList();
+  if (zoneTool==='stop_line') {
+    drawingPts.push([cx,cy]);
+    if (drawingPts.length>=2) {
+      zones.push({type:'stop_line', pts:[toNorm(...drawingPts[0]), toNorm(...drawingPts[1])]});
+      drawingPts=[]; renderZoneList();
     }
-    redrawCanvas();
-    return;
+    redrawCanvas(); return;
   }
-  drawingPts.push([x, y]);
-  redrawCanvas();
+  drawingPts.push([cx,cy]); redrawCanvas();
 }
 
 function onCanvasMove(e) {
-  if (!zoneTool || drawingPts.length === 0) return;
-  const r  = canvas.getBoundingClientRect();
-  const vr = getVideoRenderRect();
-  const mx = e.clientX - r.left;
-  const my = e.clientY - r.top;
-  const cx = Math.max(vr.x, Math.min(vr.x + vr.w, mx));
-  const cy = Math.max(vr.y, Math.min(vr.y + vr.h, my));
-  redrawCanvas(cx, cy);
+  if (!zoneTool||drawingPts.length===0) return;
+  const r=canvas.getBoundingClientRect(), vr=getVideoRenderRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  redrawCanvas(Math.max(vr.x,Math.min(vr.x+vr.w,mx)), Math.max(vr.y,Math.min(vr.y+vr.h,my)));
 }
 
 function onCanvasDblClick(e) {
-  if (!zoneTool) return;
-  if (zoneTool === 'stop_line') return;
-  if (drawingPts.length < 2) { drawingPts = []; return; }
-  zones.push({ type: zoneTool, pts: [...drawingPts] });
-  drawingPts = [];
-  renderZoneList();
-  redrawCanvas();
+  if (!zoneTool||zoneTool==='stop_line') return;
+  if (drawingPts.length<2) { drawingPts=[]; return; }
+  zones.push({type:zoneTool, pts:drawingPts.map(p=>toNorm(p[0],p[1]))});
+  drawingPts=[]; renderZoneList(); redrawCanvas();
 }
 
 function redrawCanvas(mx, my) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const colors={stop_line:'#ef4444',crosswalk:'#22c55e',traffic_light_roi:'#f59e0b'};
 
-  const colorMap = {stop_line:'#ef4444', crosswalk:'#16a34a', traffic_light_roi:'#d97706'};
-
-  zones.forEach(z => {
-    ctx.strokeStyle = colorMap[z.type] || '#888';
-    ctx.lineWidth   = 2;
-    ctx.setLineDash([]);
-    if (z.type === 'stop_line') {
-      ctx.beginPath();
-      if (z.pts && z.pts.length >= 2) {
-        ctx.moveTo(z.pts[0][0], z.pts[0][1]);
-        ctx.lineTo(z.pts[1][0], z.pts[1][1]);
-      } else {
-        ctx.moveTo(z.x1, z.y); ctx.lineTo(z.x2, z.y);
+  zones.forEach(z=>{
+    ctx.strokeStyle=colors[z.type]||'#888'; ctx.lineWidth=2; ctx.setLineDash([]);
+    if (z.type==='stop_line') {
+      if (z.pts&&z.pts.length>=2) {
+        const a=toCanvas(z.pts[0]), b=toCanvas(z.pts[1]);
+        ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+        ctx.fillStyle=colors[z.type]; ctx.font='11px Inter,sans-serif';
+        ctx.fillText('停止线',a[0]+6,a[1]-6);
       }
-      ctx.stroke();
-      ctx.fillStyle = colorMap[z.type];
-      ctx.font = '11px Inter, sans-serif';
-      const lp = z.pts ? z.pts[0] : [6, z.y];
-      ctx.fillText('停止线', lp[0]+6, lp[1]-6);
-    } else if (z.pts && z.pts.length) {
-      ctx.fillStyle = colorMap[z.type] + '28';
-      ctx.beginPath();
-      ctx.moveTo(z.pts[0][0], z.pts[0][1]);
-      z.pts.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+    } else if (z.pts&&z.pts.length) {
+      const cp=z.pts.map(toCanvas);
+      ctx.fillStyle=colors[z.type]+'28'; ctx.beginPath();
+      ctx.moveTo(cp[0][0],cp[0][1]); cp.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
       ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   });
 
   if (drawingPts.length) {
-    ctx.strokeStyle = colorMap[zoneTool] || '#888';
-    ctx.lineWidth   = 2;
-    ctx.setLineDash([5, 3]);
-    if (zoneTool === 'stop_line') {
-      ctx.beginPath();
-      ctx.moveTo(drawingPts[0][0], drawingPts[0][1]);
-      if (mx !== undefined) ctx.lineTo(mx, my);
-      ctx.stroke();
-      ctx.fillStyle = colorMap[zoneTool] || '#888';
-      ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(drawingPts[0][0], drawingPts[0][1], 4, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle=colors[zoneTool]||'#888'; ctx.lineWidth=2; ctx.setLineDash([5,3]);
+    if (zoneTool==='stop_line') {
+      ctx.beginPath(); ctx.moveTo(drawingPts[0][0],drawingPts[0][1]);
+      if (mx!==undefined) ctx.lineTo(mx,my); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle=colors[zoneTool];
+      ctx.beginPath(); ctx.arc(drawingPts[0][0],drawingPts[0][1],4,0,Math.PI*2); ctx.fill();
     } else {
-      ctx.fillStyle = (colorMap[zoneTool] || '#888') + '18';
-      ctx.beginPath();
-      ctx.moveTo(drawingPts[0][0], drawingPts[0][1]);
-      drawingPts.slice(1).forEach(p=>ctx.lineTo(p[0], p[1]));
-      if (mx !== undefined) ctx.lineTo(mx, my);
+      ctx.fillStyle=(colors[zoneTool]||'#888')+'18'; ctx.beginPath();
+      ctx.moveTo(drawingPts[0][0],drawingPts[0][1]);
+      drawingPts.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+      if (mx!==undefined) ctx.lineTo(mx,my);
       ctx.closePath(); ctx.fill(); ctx.stroke();
       drawingPts.forEach(p=>{
-        ctx.fillStyle = colorMap[zoneTool];
-        ctx.setLineDash([]);
-        ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle=colors[zoneTool]; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(p[0],p[1],4,0,Math.PI*2); ctx.fill();
       });
     }
   }
 }
 
 function renderZoneList() {
-  const el  = document.getElementById('zoneList');
-  const map = {stop_line:'停止线', crosswalk:'斑马线', traffic_light_roi:'红绿灯区域'};
+  const el=document.getElementById('zoneList');
+  const m={stop_line:'停止线',crosswalk:'斑马线',traffic_light_roi:'红绿灯区域'};
   if (!zones.length) { el.innerHTML='<div style="color:var(--text3)">尚未配置区域</div>'; return; }
-  el.innerHTML = zones.map((z,i)=>`
-    <div class="zent">
-      <span>${map[z.type]||z.type} #${i+1}</span>
-      <button class="zdel" onclick="removeZone(${i})">\u00d7</button>
-    </div>`).join('');
+  el.innerHTML=zones.map((z,i)=>`
+    <div class="zent"><span>${m[z.type]||z.type} #${i+1}</span>
+    <button class="zdel" onclick="removeZone(${i})">×</button></div>`).join('');
 }
 
-function removeZone(i) {
-  zones.splice(i, 1);
-  renderZoneList();
-  redrawCanvas();
-}
+function removeZone(i) { zones.splice(i,1); renderZoneList(); redrawCanvas(); }
 
 function clearZones() {
-  zones = []; drawingPts = [];
-  renderZoneList(); redrawCanvas();
-  fetch('/api/set_zones', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({zones: []})});
-  toast('已清除所有区域', 'info');
+  zones=[]; drawingPts=[]; renderZoneList(); redrawCanvas();
+  fetch('/api/set_zones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({zones:[]})});
+  toast('已清除所有区域','info');
 }
 
 async function pushZones() {
-  const vr = getVideoRenderRect();
-  const frameW = Math.max(1, Math.round(videoEl.naturalWidth  || vr.w || 1));
-  const frameH = Math.max(1, Math.round(videoEl.naturalHeight || vr.h || 1));
-
-  const toFramePoint = (p) => {
-    const relX = (p[0] - vr.x) / (vr.w || 1);
-    const relY = (p[1] - vr.y) / (vr.h || 1);
-    const fx = Math.round(Math.max(0, Math.min(frameW - 1, relX * frameW)));
-    const fy = Math.round(Math.max(0, Math.min(frameH - 1, relY * frameH)));
-    return [fx, fy];
-  };
-
-  const scaled = zones.map(z => {
-    if (z.pts) return { ...z, pts: z.pts.map(toFramePoint) };
-    if (z.type === 'stop_line') {
-      const p1 = toFramePoint([z.x1, z.y]);
-      const p2 = toFramePoint([z.x2, z.y]);
-      return { ...z, pts: [p1, p2] };
-    }
-    return z;
-  });
-  await fetch('/api/set_zones', {method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({zones: scaled})});
-  toast(`已应用 ${zones.length} 个检测区域`, 'success');
+  const fw=Math.max(1,Math.round(videoEl.naturalWidth||640));
+  const fh=Math.max(1,Math.round(videoEl.naturalHeight||480));
+  const scaled=zones.map(z=>({
+    ...z,
+    pts: z.pts?z.pts.map(np=>[
+      Math.round(Math.max(0,Math.min(fw-1,np[0]*fw))),
+      Math.round(Math.max(0,Math.min(fh-1,np[1]*fh)))
+    ]):undefined
+  }));
+  await fetch('/api/set_zones',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({zones:scaled})});
+  toast(`已应用 ${zones.length} 个检测区域`,'success');
 }
 
 // ── Toast ─────────────────────────────────────────────────────────
 function toast(msg, type='info') {
-  const c = document.getElementById('toasts');
-  const t = document.createElement('div');
-  const ico = {success:'\u2713', error:'\u2715', info:'\u2139'};
-  t.className = `toast ${type}`;
-  t.innerHTML = `<span>${ico[type]||'\u25cf'}</span><span>${msg}</span>`;
-  c.prepend(t);
-  setTimeout(()=>t.remove(), 3000);
+  const c=document.getElementById('toasts'), t=document.createElement('div');
+  const ico={success:'✓',error:'✕',info:'ℹ'};
+  t.className=`toast ${type}`;
+  t.innerHTML=`<span>${ico[type]||'●'}</span><span>${msg}</span>`;
+  c.prepend(t); setTimeout(()=>t.remove(),3000);
 }
 </script>
 </body>

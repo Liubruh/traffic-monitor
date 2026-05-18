@@ -8,63 +8,10 @@ import numpy as np
 import time
 from datetime import datetime
 
-VEHICLE_CLASSES = {'car', 'truck', 'bus', 'motorcycle', 'bicycle'}
-
-
-# ── 几何工具 ─────────────────────────────────────────────────────────────
-
-def _bbox_bottom_center(bbox):
-    x1, y1, x2, y2 = bbox
-    return ((x1 + x2) // 2, y2)
-
-
-def _point_in_polygon(pt, polygon):
-    x, y = pt
-    n = len(polygon)
-    inside = False
-    j = n - 1
-    for i in range(n):
-        xi, yi = polygon[i]
-        xj, yj = polygon[j]
-        if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi + 1e-9) + xi):
-            inside = not inside
-        j = i
-    return inside
-
-
-def _bbox_overlaps_polygon(bbox, polygon):
-    x1, y1, x2, y2 = bbox
-    return any(_point_in_polygon(p, polygon) for p in [
-        _bbox_bottom_center(bbox),
-        ((x1 + x2) // 2, (y1 + y2) // 2),
-    ])
-
-
-def _stop_line_endpoints(sl):
-    pts = sl.get('pts')
-    if pts and len(pts) >= 2:
-        return pts[0][0], pts[0][1], pts[1][0], pts[1][1]
-    y = sl.get('y', 0)
-    return sl.get('x1', 0), y, sl.get('x2', 9999), y
-
-
-def _bbox_crosses_stop_line(bbox, sl):
-    bx1, by1, bx2, by2 = bbox
-    lx1, ly1, lx2, ly2 = _stop_line_endpoints(sl)
-    mid_x = (bx1 + bx2) // 2
-    if not (min(lx1, lx2) <= mid_x <= max(lx1, lx2)):
-        return False
-    if lx2 != lx1:
-        t = (mid_x - lx1) / (lx2 - lx1)
-        line_y = ly1 + t * (ly2 - ly1)
-    else:
-        line_y = ly1
-    return by1 <= line_y <= by2
-
-
-# ── 引擎 ─────────────────────────────────────────────────────────────────
 
 class ViolationEngine:
+
+    VEHICLE_CLASSES = {'car', 'truck', 'bus', 'motorcycle', 'bicycle'}
 
     def __init__(self):
         self.zones = []
@@ -75,6 +22,57 @@ class ViolationEngine:
         self._last_alert = {}
         self._tracked_vio = {}
         self._crosswalk_wait = {}
+
+    # ── 几何工具（静态方法）──────────────────────────────────────────────
+
+    @staticmethod
+    def _bbox_bottom_center(bbox):
+        x1, y1, x2, y2 = bbox
+        return ((x1 + x2) // 2, y2)
+
+    @staticmethod
+    def _point_in_polygon(pt, polygon):
+        x, y = pt
+        n = len(polygon)
+        inside = False
+        j = n - 1
+        for i in range(n):
+            xi, yi = polygon[i]
+            xj, yj = polygon[j]
+            if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi + 1e-9) + xi):
+                inside = not inside
+            j = i
+        return inside
+
+    @classmethod
+    def _bbox_overlaps_polygon(cls, bbox, polygon):
+        x1, y1, x2, y2 = bbox
+        return any(cls._point_in_polygon(p, polygon) for p in [
+            cls._bbox_bottom_center(bbox),
+            ((x1 + x2) // 2, (y1 + y2) // 2),
+        ])
+
+    @staticmethod
+    def _stop_line_endpoints(sl):
+        pts = sl.get('pts')
+        if pts and len(pts) >= 2:
+            return pts[0][0], pts[0][1], pts[1][0], pts[1][1]
+        y = sl.get('y', 0)
+        return sl.get('x1', 0), y, sl.get('x2', 9999), y
+
+    @classmethod
+    def _bbox_crosses_stop_line(cls, bbox, sl):
+        bx1, by1, bx2, by2 = bbox
+        lx1, ly1, lx2, ly2 = cls._stop_line_endpoints(sl)
+        mid_x = (bx1 + bx2) // 2
+        if not (min(lx1, lx2) <= mid_x <= max(lx1, lx2)):
+            return False
+        if lx2 != lx1:
+            t = (mid_x - lx1) / (lx2 - lx1)
+            line_y = ly1 + t * (ly2 - ly1)
+        else:
+            line_y = ly1
+        return by1 <= line_y <= by2
 
     # ── 基础设施 ──────────────────────────────────────────────────────
 
@@ -137,39 +135,37 @@ class ViolationEngine:
         stop_lines = [z for z in self.zones if z.get('type') == 'stop_line']
         crosswalks = [z for z in self.zones if z.get('type') == 'crosswalk']
 
-        # 预计算：每个斑马线上是否有行人
         ped_on_cw = {}
         for i, cw in enumerate(crosswalks):
             pts = cw.get('pts', [])
             if pts:
                 ped_on_cw[i] = [d for d in results
                                 if d.class_name == 'person'
-                                and _bbox_overlaps_polygon(d.bbox, pts)]
+                                and self._bbox_overlaps_polygon(d.bbox, pts)]
 
         violations = []
 
         for det in results:
-            if det.class_name not in VEHICLE_CLASSES:
+            if det.class_name not in self.VEHICLE_CLASSES:
                 continue
 
             vio_type = None
-            track_id = getattr(det, 'track_id', None)
 
             # 1. 闯红灯
             if light_color == 'red':
                 for sl in stop_lines:
-                    if _bbox_crosses_stop_line(det.bbox, sl):
+                    if self._bbox_crosses_stop_line(det.bbox, sl):
                         vio_type = '闯红灯'
                         break
 
             # 2. 占用斑马线（静止超过阈值）
             if vio_type is None:
-                in_cw = any(_bbox_overlaps_polygon(det.bbox, cw.get('pts', []))
+                in_cw = any(self._bbox_overlaps_polygon(det.bbox, cw.get('pts', []))
                             for cw in crosswalks)
                 det_key = self._det_key(det)
 
                 if in_cw:
-                    cx, cy = _bbox_bottom_center(det.bbox)
+                    cx, cy = self._bbox_bottom_center(det.bbox)
                     state = self._crosswalk_wait.get(det_key)
                     if state is None:
                         self._crosswalk_wait[det_key] = {
@@ -191,11 +187,10 @@ class ViolationEngine:
             # 3. 未礼让行人
             if vio_type is None:
                 for i, cw in enumerate(crosswalks):
-                    if ped_on_cw.get(i) and _bbox_overlaps_polygon(det.bbox, cw.get('pts', [])):
+                    if ped_on_cw.get(i) and self._bbox_overlaps_polygon(det.bbox, cw.get('pts', [])):
                         vio_type = '未礼让行人'
                         break
 
-            # 写入违法标记 / 粘性跟随
             if vio_type:
                 self._emit(det, vio_type, now, ts, violations)
             else:
