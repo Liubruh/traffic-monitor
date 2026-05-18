@@ -19,9 +19,12 @@ class ViolationEngine:
         self.track_ttl = 2.5
         self.crosswalk_static_secs = 1.5
         self.static_move_tol_px = 8.0
+        self.yield_track_len = 10
+        self.yield_threat_ratio = 3.0
         self._last_alert = {}
         self._tracked_vio = {}
         self._crosswalk_wait = {}
+        self._vehicle_tracks = {}
 
     # ── 几何工具（静态方法）──────────────────────────────────────────────
 
@@ -94,6 +97,64 @@ class ViolationEngine:
     def _cleanup(self, now):
         self._cleanup_dict(self._tracked_vio, now)
         self._cleanup_dict(self._crosswalk_wait, now)
+        self._cleanup_dict(self._vehicle_tracks, now)
+
+    # ── 未礼让行人辅助 ──────────────────────────────────────────────
+
+    def _update_vehicle_track(self, det, now):
+        track_id = getattr(det, 'track_id', None)
+        if track_id is None:
+            return
+        cx, cy = self._bbox_bottom_center(det.bbox)
+        entry = self._vehicle_tracks.get(track_id)
+        if entry is None:
+            entry = {'positions': [], 'last_seen': now}
+            self._vehicle_tracks[track_id] = entry
+        entry['positions'].append((cx, cy, now))
+        if len(entry['positions']) > self.yield_track_len:
+            entry['positions'].pop(0)
+        entry['last_seen'] = now
+        return track_id
+
+    def _vehicle_is_moving(self, track_id):
+        entry = self._vehicle_tracks.get(track_id)
+        if entry is None or len(entry['positions']) < 3:
+            return False
+        pos = entry['positions']
+        total_disp = float(np.hypot(pos[-1][0] - pos[0][0], pos[-1][1] - pos[0][1]))
+        return total_disp > self.static_move_tol_px
+
+    def _vehicle_direction(self, track_id):
+        entry = self._vehicle_tracks.get(track_id)
+        if entry is None or len(entry['positions']) < 2:
+            return 0.0, 0.0
+        pos = entry['positions']
+        dx = pos[-1][0] - pos[0][0]
+        dy = pos[-1][1] - pos[0][1]
+        mag = float(np.hypot(dx, dy)) + 1e-9
+        return dx / mag, dy / mag
+
+    def _ped_in_vehicle_path(self, track_id, ped_bbox):
+        vx, vy = self._vehicle_direction(track_id)
+        if vx == 0.0 and vy == 0.0:
+            return False
+        entry = self._vehicle_tracks.get(track_id)
+        if entry is None:
+            return False
+        v_cx, v_cy, _ = entry['positions'][-1]
+        p_cx, p_cy = self._bbox_bottom_center(ped_bbox)
+        to_ped_x = p_cx - v_cx
+        to_ped_y = p_cy - v_cy
+        return (to_ped_x * vx + to_ped_y * vy) > 0
+
+    def _ped_within_threat(self, det_bbox, ped_bbox):
+        v_cx, v_cy = self._bbox_bottom_center(det_bbox)
+        p_cx, p_cy = self._bbox_bottom_center(ped_bbox)
+        dist = float(np.hypot(p_cx - v_cx, p_cy - v_cy))
+        _, _, _, vehicle_h = det_bbox
+        _, _, _, ped_h = ped_bbox
+        ref_h = max(vehicle_h, ped_h, 1)
+        return dist < ref_h * self.yield_threat_ratio
 
     def _emit(self, det, vio_type, now, ts, violations):
         det.violation = vio_type
@@ -149,6 +210,7 @@ class ViolationEngine:
             if det.class_name not in self.VEHICLE_CLASSES:
                 continue
 
+            track_id = self._update_vehicle_track(det, now)
             vio_type = None
 
             # 1. 闯红灯
@@ -185,10 +247,21 @@ class ViolationEngine:
                     self._crosswalk_wait.pop(det_key, None)
 
             # 3. 未礼让行人
-            if vio_type is None:
+            if vio_type is None and crosswalks:
                 for i, cw in enumerate(crosswalks):
-                    if ped_on_cw.get(i) and self._bbox_overlaps_polygon(det.bbox, cw.get('pts', [])):
-                        vio_type = '未礼让行人'
+                    peds = ped_on_cw.get(i)
+                    if not peds:
+                        continue
+                    if not self._bbox_overlaps_polygon(det.bbox, cw.get('pts', [])):
+                        continue
+                    if track_id is None or not self._vehicle_is_moving(track_id):
+                        continue
+                    for ped in peds:
+                        if self._ped_in_vehicle_path(track_id, ped.bbox) and \
+                           self._ped_within_threat(det.bbox, ped.bbox):
+                            vio_type = '未礼让行人'
+                            break
+                    if vio_type:
                         break
 
             if vio_type:
