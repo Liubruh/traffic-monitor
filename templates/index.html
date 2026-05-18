@@ -653,18 +653,32 @@ function updateVehicleRecords(cc) {
 }
 
 // ── Alerts ────────────────────────────────────────────────────────
+let _renderedAlertIds = new Set();
+
 function updateAlerts(alerts) {
   const src = alerts||[];
   const vis = src.filter(a=>{
     const t=String(a?.type||''), m=String(a?.message||'');
     return !HIDDEN_ALERT_KEYWORDS.some(k=>t.includes(k)||m.includes(k));
   });
-  const badge = document.getElementById('alertBadge');
+
   if (!vis.length) {
-    document.getElementById('alertList').innerHTML='<div style="color:var(--text3);font-size:11px">暂无违规</div>';
-    badge.style.display='none'; return;
+    if (_renderedAlertIds.size) {
+      document.getElementById('alertList').innerHTML='<div style="color:var(--text3);font-size:11px">暂无违规</div>';
+      document.getElementById('alertBadge').style.display='none';
+      _renderedAlertIds.clear();
+    }
+    return;
   }
-  vis.forEach(a=>seenAlerts.add(a.id));
+
+  const currentIds = new Set(vis.map(a=>a.id));
+  const hasNew = currentIds.size !== _renderedAlertIds.size ||
+                 [...currentIds].some(id=>!_renderedAlertIds.has(id));
+  if (!hasNew) return;
+
+  _renderedAlertIds = currentIds;
+  seenAlerts = new Set([...seenAlerts, ...currentIds]);
+  const badge = document.getElementById('alertBadge');
   badge.style.display=''; badge.textContent=seenAlerts.size;
   document.getElementById('alertList').innerHTML=vis.map(a=>`
     <div class="acard ${a.level}">
@@ -681,7 +695,7 @@ async function takeSnapshot() {
 async function clearAlerts() {
   await fetch('/api/alerts/clear',{method:'POST'});
   document.getElementById('alertList').innerHTML='<div style="color:var(--text3);font-size:11px">暂无报警</div>';
-  document.getElementById('alertBadge').style.display='none'; seenAlerts.clear(); toast('已清空','info');
+  document.getElementById('alertBadge').style.display='none'; seenAlerts.clear(); _renderedAlertIds.clear(); toast('已清空','info');
 }
 
 // ══════════════════════════════════════════════════════════════════
