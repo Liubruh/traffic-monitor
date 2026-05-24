@@ -14,27 +14,35 @@ class ViolationEngine:
     VEHICLE_CLASSES = {'car', 'truck', 'bus', 'motorcycle', 'bicycle'}
 
     def __init__(self):
-        self.zones = []
+        self.zones = [] # 监控区域列表，每个元素是一个字典，包含 type（'stop_line' 或 'crosswalk'）和对应的几何信息，例如 pts（多边形顶点列表）或坐标参数
         self.cooldown = 4.0
         self.track_ttl = 2.5
         self.crosswalk_static_secs = 1.5
         self.static_move_tol_px = 8.0
-        self.yield_track_len = 10
+        self.yield_track_len = 10 # 最长跟踪位置个数
         self.yield_threat_ratio = 3.0
         self._last_alert = {}
         self._tracked_vio = {}
         self._crosswalk_wait = {}
-        self._vehicle_tracks = {}
+        self._vehicle_tracks = {} # 车辆轨迹字典，键是 track_id，值是一个包含 positions（位置列表）和 last_seen（最后一次看到该车辆的时间戳）的字典，例如 {1: {'positions': [(x1, y1, t1), (x2, y2, t2)], 'last_seen': t2}, ...}
 
     # ── 几何工具（静态方法）──────────────────────────────────────────────
 
     @staticmethod
     def _bbox_bottom_center(bbox):
+        """
+        计算边界框的底部中心点坐标，返回一个 (x, y) 元组，其中 x 是边界框左右边界的平均值，y 是边界框的下边界坐标
+        这种方法适用于检测车辆是否进入了斑马线区域或是否越过了停止线，因为车辆的底部中心点通常是最接近地面的部分，更能反映车辆的位置和是否进入了特定区域，而不像边界框的中心点可能会因为车辆的高度和姿态而产生较大偏移，尤其是在斜视图或车辆较高的情况下
+        """
         x1, y1, x2, y2 = bbox
         return ((x1 + x2) // 2, y2)
 
     @staticmethod
     def _point_in_polygon(pt, polygon):
+        """
+        判断一个点是否在一个多边形内，使用射线法（ray casting algorithm），通过计算从该点向右水平发出的一条射线与多边形边界的交点数量来判断，如果交点数量是奇数则在内部，偶数则在外部
+        这种方法适用于任意形状的多边形，包括凸多边形和凹多边形，但不适用于自交多边形（例如8字形）
+        """
         x, y = pt
         n = len(polygon)
         inside = False
@@ -48,7 +56,11 @@ class ViolationEngine:
         return inside
 
     @classmethod
-    def _bbox_overlaps_polygon(cls, bbox, polygon):
+    def _bbox_overlaps_polygon(cls, bbox, polygon): # cls 是类方法的约定参数，表示当前类对象，可以通过 cls.方法名() 来调用其他类方法，例如 cls._point_in_polygon() 和 cls._bbox_bottom_center()，这样可以保持代码的组织性和可读性
+        """
+        判断一个边界框是否与一个多边形重叠，重叠的定义是边界框的底部中心点或者中心点在多边形内
+        这种方法简单且效率较高，适用于检测车辆是否进入了斑马线区域或是否越过了停止线，虽然可能存在一些误判（例如车辆部分进入斑马线但底部中心点未进入），但在实际应用中通常已经足够使用
+        """
         x1, y1, x2, y2 = bbox
         return any(cls._point_in_polygon(p, polygon) for p in [
             cls._bbox_bottom_center(bbox),
@@ -57,16 +69,28 @@ class ViolationEngine:
 
     @staticmethod
     def _stop_line_endpoints(sl):
+        """
+        获取停止线的两个端点坐标，返回一个 (x1, y1, x2, y2) 元组，其中 (x1, y1) 是停止线的第一个端点坐标，(x2, y2) 是停止线的第二个端点坐标
+        本函数只接受 pts（多边形顶点列表）格式；如果不存在 pts 则返回 None。
+        """
         pts = sl.get('pts')
         if pts and len(pts) >= 2:
             return pts[0][0], pts[0][1], pts[1][0], pts[1][1]
-        y = sl.get('y', 0)
-        return sl.get('x1', 0), y, sl.get('x2', 9999), y
+        return None
 
     @classmethod
     def _bbox_crosses_stop_line(cls, bbox, sl):
+        """
+        bbox： 机车检测框
+        sl: 停止线区域，包含 type='stop_line' 和对应的几何信息，例如 pts（多边形顶点列表）
+        闯红灯判断：
+            判断一个边界框是否越过了一个停止线，越过的定义是边界框的底部中心点在停止线的水平范围内，并且在停止线的下方（假设停止线是水平的，且车辆从上方进入交叉口）
+        """
         bx1, by1, bx2, by2 = bbox
-        lx1, ly1, lx2, ly2 = cls._stop_line_endpoints(sl)
+        endpoints = cls._stop_line_endpoints(sl)
+        if endpoints is None:
+            return False
+        lx1, ly1, lx2, ly2 = endpoints
         mid_x = (bx1 + bx2) // 2
         if not (min(lx1, lx2) <= mid_x <= max(lx1, lx2)):
             return False
@@ -102,7 +126,18 @@ class ViolationEngine:
     # ── 未礼让行人辅助 ──────────────────────────────────────────────
 
     def _update_vehicle_track(self, det, now):
-        track_id = getattr(det, 'track_id', None)
+        """
+        det is 机车
+        更新车辆轨迹信息，返回该检测结果的 track_id（如果有的话），并在内部维护一个车辆轨迹字典 _vehicle_tracks，键是 track_id，值是一个包含 positions（位置列表）和 last_seen（最后一次看到该车辆的时间戳）的字典
+        每当检测到一个车辆结果时，都会调用该方法来更新其轨迹信息：
+            - 首先获取该检测结果的 track_id，如果没有则返回 None
+            - 计算该检测结果的底部中心点坐标 (cx, cy)
+            - 在 _vehicle_tracks 中查找该 track_id 的轨迹信息，如果没有则创建一个新的条目，初始位置列表为空，last_seen 设置为当前时间
+            - 将当前的底部中心点坐标和时间戳添加到位置列表中，如果位置列表长度超过 yield_track_len 则移除最旧的位置
+            - 更新 last_seen 为当前时间
+            - 返回 track_id
+        """
+        track_id = getattr(det, 'track_id', None) # getattr() 函数用于获取对象的属性值，第一个参数是对象，第二个参数是属性名称字符串，如果该属性不存在则返回 None（或者可以指定一个默认值），这样可以避免直接访问 det.track_id 时可能出现的 AttributeError 异常
         if track_id is None:
             return
         cx, cy = self._bbox_bottom_center(det.bbox)
@@ -190,14 +225,23 @@ class ViolationEngine:
 
     def check(self, results, light_color='unknown'):
         now = time.time()
-        ts = datetime.now().strftime('%H:%M:%S')
+        ts = datetime.now().strftime('%H:%M:%S') # 可以改成更精确的时间格式，例如 '%Y-%m-%d %H:%M:%S.%f'，以包含日期和毫秒
         self._cleanup(now)
 
-        stop_lines = [z for z in self.zones if z.get('type') == 'stop_line']
+        stop_lines = [z for z in self.zones if z.get('type') == 'stop_line'] # list.get('type') 可以避免 KeyError，如果该键不存在则返回 None，不会抛出异常，这样可以更健壮地处理输入数据
         crosswalks = [z for z in self.zones if z.get('type') == 'crosswalk']
 
         ped_on_cw = {}
-        for i, cw in enumerate(crosswalks):
+        """
+        代表在每个斑马线区域内的行人检测结果，键是斑马线索引，值是行人检测结果列表，
+        例如 {0: [ped1, ped2], 1: [ped3]}，其中 ped1、ped2、ped3 是检测结果对象，YOLODetector类型
+        """
+        for i, cw in enumerate(crosswalks): 
+            """
+            对于每个斑马线区域，找出所有在该区域内的行人检测结果，存储在 ped_on_cw 字典中，键是斑马线索引，值是行人检测结果列表 
+            enumerate(crosswalks) 会返回一个包含索引和值的迭代器，例如 [(0, cw1), (1, cw2), ...]，其中 cw1、cw2 是斑马线区域的字典，索引值 i 可以用来在 ped_on_cw 中存储对应的行人列表
+            cw.get('pts', []) 可以获取斑马线区域的 **多边形顶点列表**，如果该键不存在则返回空列表，这样可以避免 KeyError 异常
+            """ 
             pts = cw.get('pts', [])
             if pts:
                 ped_on_cw[i] = [d for d in results

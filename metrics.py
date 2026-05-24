@@ -6,10 +6,10 @@ class MetricsTracker:
     def __init__(self, window=60):
         self.fps_history = deque(maxlen=window)
         self.detection_history = deque(maxlen=window)
-        self.class_counts = defaultdict(int)
+        self.class_counts = defaultdict(int) # 特殊字典 - 统计每个类别的累计次数，自动初始化为0
         self.total_frames = 0
         self.total_detections = 0
-        self.alert_log = deque(maxlen=100)
+        self.alert_log = deque(maxlen=100) # 双端队列 - 违法记录
         self.violation_counts = defaultdict(int)   # 各类型违规累计次数
         self.total_violations = 0
         self.start_time = time.time()

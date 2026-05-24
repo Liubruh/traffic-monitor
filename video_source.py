@@ -25,6 +25,18 @@ class VideoSource:
         return self.cap.isOpened()
 
     def read(self):
+        """
+        cap.read() 返回两个值，第一个是布尔值，表示是否成功读取到帧；第二个是读取到的帧图像（如果成功的话）
+        frame格式例如：
+            frame.shape = (720, 1280, 3) # 高、宽、通道数
+            frame.dtype = uint8 # 数据类型为无符号8位整数
+            frame = np.array([
+                [[B, G, R], [B, G, R], ..., [B, G, R]],  # 第1行像素的BGR值
+                [[B, G, R], [B, G, R], ..., [B, G, R]],  # 第2行像素的BGR值
+                ...,
+                [[B, G, R], [B, G, R], ..., [B, G, R]],  # 第720行像素的BGR值
+            ])本质三位数组，每个元素是一个包含蓝绿红三个通道值的列表，范围0~255，表示该像素的颜色信息。
+        """
         if self.cap is None or not self.cap.isOpened():
             return False, None
         return self.cap.read()
