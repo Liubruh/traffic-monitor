@@ -360,6 +360,9 @@ function clearZones() {
 }
 
 async function pushZones() {
+  /*
+  将当前 zones 中的归一化坐标转换为视频原始分辨率的像素坐标，并发送到后端保存。
+  */
   const fw=Math.max(1,Math.round(videoEl.naturalWidth||640));
   const fh=Math.max(1,Math.round(videoEl.naturalHeight||480));
   const scaled=zones.map(z=>({

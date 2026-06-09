@@ -6,88 +6,16 @@ from collections import Counter
 import cv2
 import numpy as np
 
-COCO_CLASSES = [
-    "person",
-    "bicycle",
-    "car",
-    "motorcycle",
-    "airplane",
-    "bus",
-    "train",
-    "truck",
-    "boat",
-    "traffic light",
-    "fire hydrant",
-    "stop sign",
-    "parking meter",
-    "bench",
-    "bird",
-    "cat",
-    "dog",
-    "horse",
-    "sheep",
-    "cow",
-    "elephant",
-    "bear",
-    "zebra",
-    "giraffe",
-    "backpack",
-    "umbrella",
-    "handbag",
-    "tie",
-    "suitcase",
-    "frisbee",
-    "skis",
-    "snowboard",
-    "sports ball",
-    "kite",
-    "baseball bat",
-    "baseball glove",
-    "skateboard",
-    "surfboard",
-    "tennis racket",
-    "bottle",
-    "wine glass",
-    "cup",
-    "fork",
-    "knife",
-    "spoon",
-    "bowl",
-    "banana",
-    "apple",
-    "sandwich",
-    "orange",
-    "broccoli",
-    "carrot",
-    "hot dog",
-    "pizza",
-    "donut",
-    "cake",
-    "chair",
-    "couch",
-    "potted plant",
-    "bed",
-    "dining table",
-    "toilet",
-    "tv",
-    "laptop",
-    "mouse",
-    "remote",
-    "keyboard",
-    "cell phone",
-    "microwave",
-    "oven",
-    "toaster",
-    "sink",
-    "refrigerator",
-    "book",
-    "clock",
-    "vase",
-    "scissors",
-    "teddy bear",
-    "hair drier",
-    "toothbrush",
-]
+COCO_CLASSES = {
+    0: "person",
+    1: "bicycle",
+    2: "car",
+    3: "motorcycle",
+    5: "bus",
+    7: "truck",
+    9: "traffic light",
+    11: "stop sign",
+}
 
 # BGR 颜色e
 CLASS_COLORS = {
@@ -128,7 +56,7 @@ class YOLODetector:
     def __init__(
         self,
         model_size="n",
-        conf_threshold=0.5,
+        conf_threshold=0.3,
         target_classes=None,
         use_gpu=True,
         enable_bytetrack=True,
@@ -169,6 +97,7 @@ class YOLODetector:
                     )  # 加载模型到默认设备（通常是CPU）
                     self.yolo.to("cuda")
                     self._infer_device = "cuda"
+                    # device_info 包含了设备类型和具体型号
                     self.device_info = f"CUDA · {torch.cuda.get_device_name(0)}"
                     self.backend = "ultralytics"
                     self.model_loaded = True
@@ -216,7 +145,7 @@ class YOLODetector:
                 - track() 是 ultralytics YOLOv8 中的一个方法，用于在视频或连续帧中进行对象检测和跟踪。启用 Bytetrack 追踪模式后，推理函数改为 track()，以保持状态并分配轨迹ID。
                 - persist=True 参数告诉模型在连续帧之间保持跟踪状态，这样它可以识别出同一对象在不同帧中的连续出现，并为其分配相同的 track_id。
                 - tracker_cfg 是 Bytetrack 的配置文件路径，包含了跟踪算法的参数设置，如匹配策略、距离度量、最大失踪时间等。传入该配置后，模型会根据配置使用 Bytetrack 进行跟踪。
-                bbox,class,confidence,track_id = infer_fn(frame, conf=run_conf, device=self._infer_device, verbose=False, persist=True, tracker=self.tracker_cfg)[0].boxes
+                得到bbox,class,confidence,track_id = infer_fn(frame, conf=run_conf, device=self._infer_device, verbose=False, persist=True, tracker=self.tracker_cfg)[0].boxes
             """
             infer_kwargs["persist"] = True
             infer_kwargs["tracker"] = self.tracker_cfg
@@ -251,7 +180,9 @@ class YOLODetector:
             box.cls[0]     # tensor(2.)       ← 取第 0 个元素，变成标量 tensor
             int(box.cls[0]) # 2               ← 转成 Python int
             """
-            cls_name = COCO_CLASSES[cls_id] if cls_id < len(COCO_CLASSES) else "unknown"
+            cls_name = COCO_CLASSES.get(cls_id, "unknown")
+            if cls_name == "unknown":
+                continue
             if self.target_classes and cls_name not in self.target_classes:
                 continue
             conf = float(box.conf[0])
@@ -394,6 +325,8 @@ class YOLODetector:
 
             # 红绿灯颜色覆盖
             if det.class_name == "traffic light":
+                # extra 字段是 DetectionResult 中的一个字典，用于存储红绿灯颜色等非标准字段。
+                # 通过 det.extra.get("light_color", "unknown") 可以获取当前检测到的红绿灯颜色，如果没有该字段则返回 "unknown"
                 lc = det.extra.get("light_color", "unknown")
                 color = {
                     "red": (30, 30, 220),
@@ -404,10 +337,24 @@ class YOLODetector:
             # 违法半透明填充
             if is_violation:
                 ov_buf = output.copy()
+                """
+                    rectangle() 函数用于在图像上绘制矩形框，参数说明：
+                    ov_buf: 违法填充的图像，包含了红色半透明矩形
+                    (x1, y1): 矩形框的左上角坐标，(x2, y2): 矩形框的右下角坐标，VIOLATION_COLOR: 矩形框的颜色，这里是红色，-1: 表示填充矩形内部区域
+                """
                 cv2.rectangle(ov_buf, (x1, y1), (x2, y2), VIOLATION_COLOR, -1)
+                """
+                    addWeighted() 函数用于将两个图像进行加权混合，参数说明：
+                    - ov_buf: 违法填充的图像，包含了红色半透明矩形
+                    - 0.18: ov_buf 的权重，控制违法填充的透明度，值越大越不透明，这里设置为 0.18，表示违法填充占 18% 的权重
+                    - output: 原始图像，包含了检测框和其他绘制内容
+                    - 0.82: output 的权重，控制原始图像的显示程度，值越大越清晰，这里设置为 0.82，表示原始图像占 82% 的权重
+                    - 0: gamma 值，通常设置为 0，表示不进行亮度调整
+                    - output: 输出图像，存储混合后的结果，这里直接覆盖原始图像，使违法区域呈现半透明红色效果
+                """
                 cv2.addWeighted(ov_buf, 0.18, output, 0.82, 0, output)
 
-            thick = 3 if is_violation else 2
+            thick = 3 if is_violation else 2 # 违法加粗边框
             cv2.rectangle(output, (x1, y1), (x2, y2), color, thick)
 
             # 标签文字
@@ -426,21 +373,29 @@ class YOLODetector:
                 }
                 parts.append(f"! {vmap.get(det.violation, det.violation)}")
             label = "  ".join(parts)
-
+            """
+            getTextSize() 函数用于计算文本标签的尺寸，参数说明：
+            label: 要绘制的文本标签内容，cv2.FONT_HERSHEY_SIMPLEX: 字体类型，0.44: 字体大小，1: 字体粗细
+            得到的数据格式是(lw, lh), bl，其中 lw 是文本标签的宽度，lh 是文本标签的高度，bl 是基线位置（baseline），表示文本底部到基线的距离，用于调整文本的位置，使其不会被检测框遮挡。
+            """
             (lw, lh), bl = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.44, 1)
+            # ly 的计算确保标签框不会超出图像上边界，优先放在检测框上方，如果空间不足则放在下方
             ly = max(y1 - 4, lh + 6)
+            """
+                (x1, ly - lh - bl - 3), (x1 + lw + 8, ly + bl - 2)
+                这两个坐标定义了标签背景矩形的左上角和右下角位置，确保标签框能够完全包裹文本内容，并且与检测框有适当的间距。
+            """
             cv2.rectangle(
                 output, (x1, ly - lh - bl - 3), (x1 + lw + 8, ly + bl - 2), color, -1
             )
-            cv2.putText(
-                output,
-                label,
+            # putText() 函数用于在图像上绘制文本标签
+            cv2.putText(output,label,
                 (x1 + 4, ly - bl),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.44,
                 (255, 255, 255),
                 1,
-                cv2.LINE_AA,
+                cv2.LINE_AA, # LINE_AA 表示使用抗锯齿线条，使文本边缘更平滑，提升标签的视觉效果
             )
 
         # 状态栏
@@ -481,22 +436,7 @@ class YOLODetector:
                     cv2.putText(
                         frame,
                         "STOP LINE",
-                        (p1[0] + 6, p1[1] - 8),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.45,
-                        color,
-                        1,
-                    )
-                else:
-                    # 兼容旧格式
-                    y = int(zone.get("y", h // 2))
-                    x1 = int(zone.get("x1", 0))
-                    x2 = int(zone.get("x2", w))
-                    cv2.line(frame, (x1, y), (x2, y), color, 3)
-                    cv2.putText(
-                        frame,
-                        "STOP LINE",
-                        (x1 + 6, y - 8),
+                        (p1[0] + 6, p1[1] - 8), #
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.45,
                         color,
@@ -548,7 +488,6 @@ class TrafficLightTracker:
         - persist_secs: 超过该时间未见有效状态则重置为 unknown，默认6秒
         - update(raw_color, source): 更新当前帧的原始颜色状态，返回平滑后的稳定状态。source 参数用于指示调用来源（如 'detector'），以决定是否强制更新稳定状态。
         - reset(): 重置内部状态，清空历史记录和计时器。
-        ROI（Region of Interest，感兴趣区域）就是用户在前端画的红绿灯分析区域，启用后检测到的红绿灯如果在该区域内才进行颜色识别和状态更新，这样可以避免画面中其他位置的红绿灯干扰分析结果。
     """
 
     def __init__(self, history_len=20, min_votes=5, persist_secs=6.0):
@@ -576,18 +515,19 @@ class TrafficLightTracker:
                 return self._stable
 
         if now - self._last_seen > self._persist_s:
+            # 超过 persist_secs 秒未见有效状态，重置为 unknown
             self._stable = "unknown"
             self._history = []
             return self._stable
 
         if self._history:
             """
-            当且仅当当前检测到的状态不是 'unknown' 时，并且采用ROI分析时，需要使用投票机制
-            统计历史记录中出现次数最多的颜色状态，如果该状态的票数超过 min_votes 则更新稳定状态
-            Counter(self._history) 会统计历史记录中每个颜色状态出现的次数，most_common(1) 会返回出现次数最多的那个状态及其次数，[0] 取第一个元素（因为可能有多个状态出现相同次数），[0] 再取状态名称，[1] 取票数
-            Counter(self._history) = [(),()]
-            Counter(self._history).most_common(1) = [()]
-            top, cnt = Counter(self._history).most_common(1)[0] = ('red', 3) 元组
+                当且仅当当前检测到的状态不是 'unknown' 时，并且采用ROI分析时，需要使用投票机制
+                统计历史记录中出现次数最多的颜色状态，如果该状态的票数超过 min_votes 则更新稳定状态
+                Counter(self._history) 会统计历史记录中每个颜色状态出现的次数，most_common(1) 会返回出现次数最多的那个状态及其次数，[0] 取第一个元素（因为可能有多个状态出现相同次数），[0] 再取状态名称，[1] 取票数
+                Counter(self._history) = [(),()]
+                Counter(self._history).most_common(1) = [()]
+                top, cnt = Counter(self._history).most_common(1)[0] = ('red', 3) 元组
             """
             top, cnt = Counter(self._history).most_common(1)[0]
             if cnt >= self._min_votes:

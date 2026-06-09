@@ -206,6 +206,9 @@ class TrafficMonitorApp:
             time.sleep(0.01)
 
     def _generate_frames(self):
+        """
+            生成视频流的帧数据，持续从current_frame获取最新的处理后帧，并将其编码为JPEG格式返回给前端，供实时展示使用
+        """
         while True:
             with self.frame_lock:
                 if self.current_frame is None:
@@ -240,8 +243,12 @@ class TrafficMonitorApp:
         return resp
 
     def video_feed(self):
+        """
+            视频流路由，返回一个multipart/x-mixed-replace类型的响应，内容是持续生成的JPEG帧数据，供前端通过<img>标签实时展示使用
+        """
         return Response(
             self._generate_frames(),
+            # multipart/x-mixed-replace 是一种特殊的HTTP响应类型，允许服务器持续发送多部分内容，每部分内容之间用一个边界字符串分隔。
             mimetype="multipart/x-mixed-replace; boundary=frame",
         )
 
@@ -250,7 +257,7 @@ class TrafficMonitorApp:
         source_type = data.get("source_type", "camera")
         source_value = data.get("source_value", "0")
         model_size = data.get("model_size", "n")
-        conf_threshold = float(data.get("conf_threshold", 0.5))
+        conf_threshold = float(data.get("conf_threshold", 0.3))
         target_classes = data.get("target_classes", [])
 
         try:
@@ -327,6 +334,7 @@ class TrafficMonitorApp:
 
         filename = f"snap_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         path = os.path.join(self.SNAPSHOT_FOLDER, filename)
+        # imwrite函数将图像数据写入文件，参数frame是要保存的图像数据，path是保存的文件路径，返回值是一个布尔值，表示保存是否成功。
         cv2.imwrite(path, frame)
         return jsonify(
             {
@@ -343,6 +351,7 @@ class TrafficMonitorApp:
         if f.filename == "":
             return jsonify({"success": False, "message": "文件名为空"})
         path = os.path.join(self.UPLOAD_FOLDER, f.filename)
+        # save()方法将上传的文件保存到指定路径，参数path是保存的文件路径，返回值是None。
         f.save(path)
         return jsonify({"success": True, "path": path, "filename": f.filename})
 

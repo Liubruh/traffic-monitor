@@ -1,6 +1,5 @@
 """
 violation_engine.py — 交通违法检测引擎
-
 支持：闯红灯 / 占用斑马线 / 未礼让行人
 """
 
@@ -16,14 +15,14 @@ class ViolationEngine:
     def __init__(self):
         self.zones = [] # 监控区域列表，每个元素是一个字典，包含 type（'stop_line' 或 'crosswalk'）和对应的几何信息，例如 pts（多边形顶点列表）或坐标参数
         self.cooldown = 4.0
-        self.track_ttl = 2.5
-        self.crosswalk_static_secs = 1.5
-        self.static_move_tol_px = 8.0
+        self.track_ttl = 2.5 # 违法跟踪时间，单位秒，如果一个检测结果在该时间内持续存在且满足条件则视为同一次违法事件，可以避免重复报警
+        self.crosswalk_static_secs = 1.5 # 占用斑马线的静止时间阈值，单位秒，如果一个车辆在斑马线上静止超过该时间则认为是占用状态，可以避免由于检测噪声导致的误判
+        self.static_move_tol_px = 8.0 # 静止移动容忍度，单位像素，如果一个车辆在斑马线上移动的距离小于该值则认为是静止状态，可以避免由于检测噪声导致的误判
         self.yield_track_len = 10 # 最长跟踪位置个数
         self.yield_threat_ratio = 3.0
-        self._last_alert = {}
-        self._tracked_vio = {}
-        self._crosswalk_wait = {}
+        self._last_alert = {} # 上次报警时间字典，键是违法类型加上 track_id 或离散化的 bbox 键，例如 '闯红灯_track_1' 或 '占用斑马线_bbox_10_20_50_100'，值是上次报警的时间戳，可以用于实现冷却时间机制，避免同一辆车在短时间内多次触发同一类型的违法事件
+        self._tracked_vio = {} # 违法跟踪字典，键是 track_id，值是一个包含 type（违法类型）和 last_seen（最后一次看到该车辆的时间戳）的字典，例如 {1: {'type': '闯红灯', 'last_seen': t1}, ...}
+        self._crosswalk_wait = {} # 斑马线里的车辆序列，键是检测结果的唯一键（例如 track_id 或离散化的 bbox 坐标），值是一个包含 last_center（最后一次看到该检测结果的底部中心点坐标）、last_move（最后一次移动时间戳）和 last_seen（最后一次看到该检测结果的时间戳）的字典，例如 {'track_1': {'last_center': (x, y), 'last_move': t1, 'last_seen': t1}, ...}
         self._vehicle_tracks = {} # 车辆轨迹字典，键是 track_id，值是一个包含 positions（位置列表）和 last_seen（最后一次看到该车辆的时间戳）的字典，例如 {1: {'positions': [(x1, y1, t1), (x2, y2, t2)], 'last_seen': t2}, ...}
 
     # ── 几何工具（静态方法）──────────────────────────────────────────────
@@ -32,7 +31,6 @@ class ViolationEngine:
     def _bbox_bottom_center(bbox):
         """
         计算边界框的底部中心点坐标，返回一个 (x, y) 元组，其中 x 是边界框左右边界的平均值，y 是边界框的下边界坐标
-        这种方法适用于检测车辆是否进入了斑马线区域或是否越过了停止线，因为车辆的底部中心点通常是最接近地面的部分，更能反映车辆的位置和是否进入了特定区域，而不像边界框的中心点可能会因为车辆的高度和姿态而产生较大偏移，尤其是在斜视图或车辆较高的情况下
         """
         x1, y1, x2, y2 = bbox
         return ((x1 + x2) // 2, y2)
@@ -41,7 +39,6 @@ class ViolationEngine:
     def _point_in_polygon(pt, polygon):
         """
         判断一个点是否在一个多边形内，使用射线法（ray casting algorithm），通过计算从该点向右水平发出的一条射线与多边形边界的交点数量来判断，如果交点数量是奇数则在内部，偶数则在外部
-        这种方法适用于任意形状的多边形，包括凸多边形和凹多边形，但不适用于自交多边形（例如8字形）
         """
         x, y = pt
         n = len(polygon)
@@ -58,8 +55,7 @@ class ViolationEngine:
     @classmethod
     def _bbox_overlaps_polygon(cls, bbox, polygon): # cls 是类方法的约定参数，表示当前类对象，可以通过 cls.方法名() 来调用其他类方法，例如 cls._point_in_polygon() 和 cls._bbox_bottom_center()，这样可以保持代码的组织性和可读性
         """
-        判断一个边界框是否与一个多边形重叠，重叠的定义是边界框的底部中心点或者中心点在多边形内
-        这种方法简单且效率较高，适用于检测车辆是否进入了斑马线区域或是否越过了停止线，虽然可能存在一些误判（例如车辆部分进入斑马线但底部中心点未进入），但在实际应用中通常已经足够使用
+            判断一个边界框是否与一个多边形重叠，重叠的定义是边界框的底部中心点或者中心点在多边形内
         """
         x1, y1, x2, y2 = bbox
         return any(cls._point_in_polygon(p, polygon) for p in [
@@ -71,7 +67,6 @@ class ViolationEngine:
     def _stop_line_endpoints(sl):
         """
         获取停止线的两个端点坐标，返回一个 (x1, y1, x2, y2) 元组，其中 (x1, y1) 是停止线的第一个端点坐标，(x2, y2) 是停止线的第二个端点坐标
-        本函数只接受 pts（多边形顶点列表）格式；如果不存在 pts 则返回 None。
         """
         pts = sl.get('pts')
         if pts and len(pts) >= 2:
@@ -94,7 +89,7 @@ class ViolationEngine:
         mid_x = (bx1 + bx2) // 2
         if not (min(lx1, lx2) <= mid_x <= max(lx1, lx2)):
             return False
-        if lx2 != lx1:
+        if lx2 != lx1:# 避免除以零，如果停止线是垂直的则直接比较 y 坐标
             t = (mid_x - lx1) / (lx2 - lx1)
             line_y = ly1 + t * (ly2 - ly1)
         else:
@@ -107,6 +102,10 @@ class ViolationEngine:
         self.zones = zones or []
 
     def _det_key(self, det):
+        """
+        相当于在斑马线停留的时候，给车辆一个临时身份证
+        获取一个检测结果的唯一键，用于在内部字典中跟踪该检测结果，优先使用 track_id，如果没有则使用边界框坐标的离散化值
+        """
         track_id = getattr(det, 'track_id', None)
         if track_id is not None:
             return f'track_{track_id}'
@@ -152,14 +151,25 @@ class ViolationEngine:
         return track_id
 
     def _vehicle_is_moving(self, track_id):
+        """
+            判断一个车辆是否在移动，移动的定义是该车辆在其轨迹中至少有三个位置，并且从第一个位置到最后一个位置的总位移超过静止移动容忍度（static_move_tol_px），这样可以避免由于检测噪声导致的误判
+        """
         entry = self._vehicle_tracks.get(track_id)
         if entry is None or len(entry['positions']) < 3:
             return False
         pos = entry['positions']
+        """
+        计算从第一个位置到最后一个位置的总位移，使用欧几里得距离（hypot）来计算两点之间的距离
+        pos[-1][0] - pos[0][0] 是最后一个位置的 x 坐标减去第一个位置的 x 坐标，pos[-1][1] - pos[0][1] 是最后一个位置的 y 坐标减去第一个位置的 y 坐标，np.hypot() 函数会返回这两个差值的欧几里得距离，即 sqrt(dx^2 + dy^2)，表示车辆在轨迹中的总位移
+        """
+
         total_disp = float(np.hypot(pos[-1][0] - pos[0][0], pos[-1][1] - pos[0][1]))
         return total_disp > self.static_move_tol_px
 
     def _vehicle_direction(self, track_id):
+        """
+        计算一个车辆的运动方向向量，方向向量是一个单位向量，表示从轨迹的第一个位置指向最后一个位置的方向，如果该车辆没有足够的轨迹信息或者没有移动则返回 (0.0, 0.0)，否则返回 (dx / mag, dy / mag)，其中 dx 和 dy 是最后一个位置与第一个位置的坐标差值，mag 是 dx 和 dy 的欧几里得距离（即向量的模长），加上一个小常数 1e-9 来避免除以零的情况
+        """
         entry = self._vehicle_tracks.get(track_id)
         if entry is None or len(entry['positions']) < 2:
             return 0.0, 0.0
@@ -167,31 +177,47 @@ class ViolationEngine:
         dx = pos[-1][0] - pos[0][0]
         dy = pos[-1][1] - pos[0][1]
         mag = float(np.hypot(dx, dy)) + 1e-9
-        return dx / mag, dy / mag
+        return dx / mag, dy / mag # sinx cosx
 
     def _ped_in_vehicle_path(self, track_id, ped_bbox):
+        """
+        判断一个行人是否在一个车辆的运动路径上，路径的定义是从车辆轨迹的第一个位置到最后一个位置的方向向量所指示的半平面，如果该行人在该半平面内则认为在路径上，否则不在路径上
+        """
         vx, vy = self._vehicle_direction(track_id)
         if vx == 0.0 and vy == 0.0:
             return False
         entry = self._vehicle_tracks.get(track_id)
         if entry is None:
             return False
-        v_cx, v_cy, _ = entry['positions'][-1]
+        v_cx, v_cy, _ = entry['positions'][-1] # 获取车辆轨迹中最后一个位置的底部中心点坐标，作为当前车辆的位置
         p_cx, p_cy = self._bbox_bottom_center(ped_bbox)
         to_ped_x = p_cx - v_cx
         to_ped_y = p_cy - v_cy
-        return (to_ped_x * vx + to_ped_y * vy) > 0
+        return (to_ped_x * vx + to_ped_y * vy) > 0 # 点积大于零表示行人在车辆前方的半平面内
 
     def _ped_within_threat(self, det_bbox, ped_bbox):
+        """
+        判断一个行人是否在一个车辆的威胁范围内，威胁范围的定义是以车辆为中心，参考高度（取车辆和行人高度的最大值）乘以 yield_threat_ratio 作为半径的圆形区域，如果行人在该区域内则认为在威胁范围内，否则不在威胁范围内
+        """
         v_cx, v_cy = self._bbox_bottom_center(det_bbox)
         p_cx, p_cy = self._bbox_bottom_center(ped_bbox)
         dist = float(np.hypot(p_cx - v_cx, p_cy - v_cy))
+        # 第四个参数是边界框的下边界坐标，减去上边界坐标得到边界框的高度，这里取车辆和行人高度的最大值作为参考高度，以适应不同类型的车辆和行人，避免过于严格或宽松的威胁范围判断
         _, _, _, vehicle_h = det_bbox
         _, _, _, ped_h = ped_bbox
         ref_h = max(vehicle_h, ped_h, 1)
         return dist < ref_h * self.yield_threat_ratio
 
     def _emit(self, det, vio_type, now, ts, violations):
+        """
+        触发一个违法事件，参数包括：
+            det: 机车检测结果对象，包含 class_name、confidence、bbox 等属性
+            vio_type: 违法类型字符串，例如 '闯红灯'、'占用斑马线'、'未礼让行人'
+            now: 当前时间戳，用于更新内部状态和判断冷却时间
+            ts: 当前时间的字符串表示，用于记录违法事件的发生时间
+            violations: 违法事件列表，将新的违法事件以字典形式添加到该列表中，字典包含 type（违法类型）、class_name（车辆类别）、confidence（检测置信度）、time（违法发生时间字符串）和 bbox（违法车辆的边界框坐标）
+
+        """
         det.violation = vio_type
         track_id = getattr(det, 'track_id', None)
 
@@ -212,6 +238,10 @@ class ViolationEngine:
             })
 
     def _apply_sticky(self, det, now):
+        """
+        应用粘滞效果，如果一个检测结果在之前的违法跟踪字典 _tracked_vio 中有对应的 track_id，并且该违法事件在 track_ttl 时间内持续存在，
+        则将该检测结果的 violation 属性设置为之前的违法类型，这样可以保持同一辆车在短时间内持续触发同一类型的违法事件，而不需要每帧都重新判断是否满足条件
+        """
         track_id = getattr(det, 'track_id', None)
         if track_id is None:
             return
@@ -236,12 +266,13 @@ class ViolationEngine:
         代表在每个斑马线区域内的行人检测结果，键是斑马线索引，值是行人检测结果列表，
         例如 {0: [ped1, ped2], 1: [ped3]}，其中 ped1、ped2、ped3 是检测结果对象，YOLODetector类型
         """
-        for i, cw in enumerate(crosswalks): 
+        for i, cw in enumerate(crosswalks):
             """
-            对于每个斑马线区域，找出所有在该区域内的行人检测结果，存储在 ped_on_cw 字典中，键是斑马线索引，值是行人检测结果列表 
+            cw是斑马线区域的字典，包含 type='crosswalk' 和对应的几何信息，例如 pts（多边形顶点列表），可以通过 cw.get('pts', []) 来获取斑马线区域的多边形顶点列表，如果该键不存在则返回空列表，这样可以避免 KeyError 异常
+            对于每个斑马线区域，找出所有在该区域内的行人检测结果，存储在 ped_on_cw 字典中，键是斑马线索引，值是行人检测结果列表
             enumerate(crosswalks) 会返回一个包含索引和值的迭代器，例如 [(0, cw1), (1, cw2), ...]，其中 cw1、cw2 是斑马线区域的字典，索引值 i 可以用来在 ped_on_cw 中存储对应的行人列表
-            cw.get('pts', []) 可以获取斑马线区域的 **多边形顶点列表**，如果该键不存在则返回空列表，这样可以避免 KeyError 异常
-            """ 
+            cw.get('pts', []) 可以获取斑马线区域的多边形顶点列表，如果该键不存在则返回空列表，这样可以避免 KeyError 异常
+            """
             pts = cw.get('pts', [])
             if pts:
                 ped_on_cw[i] = [d for d in results
@@ -266,6 +297,7 @@ class ViolationEngine:
 
             # 2. 占用斑马线（静止超过阈值）
             if vio_type is None:
+                # any() 函数用于判断一个可迭代对象中是否至少有一个元素满足条件，如果满足条件则返回 True，否则返回 False，这里用来判断当前检测结果是否在任何一个斑马线区域内
                 in_cw = any(self._bbox_overlaps_polygon(det.bbox, cw.get('pts', []))
                             for cw in crosswalks)
                 det_key = self._det_key(det)
@@ -276,12 +308,12 @@ class ViolationEngine:
                     if state is None:
                         self._crosswalk_wait[det_key] = {
                             'last_center': (cx, cy),
-                            'last_move': now,
-                            'last_seen': now,
+                            'last_move': now, # 记录最后一次移动的时间戳，初始值为当前时间，这样可以让占用斑马线的状态在连续帧中持续显示，提升用户体验，同时也可以避免由于检测结果消失导致的误判
+                            'last_seen': now, # 记录最后一次看到该检测结果的时间戳，用于后续清理过期数据，这样可以避免由于检测结果消失导致的误判，同时也可以让占用斑马线的状态在连续帧中持续显示，提升用户体验
                         }
                     else:
                         px, py = state['last_center']
-                        if float(np.hypot(cx - px, cy - py)) > self.static_move_tol_px:
+                        if float(np.hypot(cx - px, cy - py)) > self.static_move_tol_px: # 如果当前底部中心点与上次记录的底部中心点之间的距离超过静止移动容忍度，则认为车辆发生了移动，更新 last_move 时间戳和 last_center 坐标
                             state['last_move'] = now
                         state['last_center'] = (cx, cy)
                         state['last_seen'] = now
@@ -309,8 +341,8 @@ class ViolationEngine:
                         break
 
             if vio_type:
-                self._emit(det, vio_type, now, ts, violations)
-            else:
+                self._emit(det, vio_type, now, ts, violations) # 触发违法事件并添加到 violations 列表中
+            else: # 如果当前帧没有检测到新的违法事件，则尝试应用粘滞效果来保持之前的违法状态，这样可以避免同一辆车在短时间内多次触发同一类型的违法事件，同时也可以让违法状态在连续帧中持续显示，提升用户体验
                 self._apply_sticky(det, now)
 
         return violations
