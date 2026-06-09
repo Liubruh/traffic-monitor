@@ -3,3 +3,5 @@
 __pycache__
 uploads
 photo
+video
+static/snapshots/
